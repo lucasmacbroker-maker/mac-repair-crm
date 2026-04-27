@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireRole } from "@/lib/auth";
+import { after } from "next/server";
 import { sendLinkNotificationEmail } from "@/lib/email";
 
 export async function GET(
@@ -157,18 +158,34 @@ export async function PUT(
     // Notify client when a tracking or payment link is added/changed
     const clientName = `${repair.clientFirstName} ${repair.clientLastName}`;
 
-    if (body.trackingLink && body.trackingLink !== existing.trackingLink) {
-      sendLinkNotificationEmail(
-        repair.clientEmail, clientName, repair.token, repair.macModel,
-        "tracking", body.trackingLink
-      ).catch((err) => console.error("Failed to send tracking link email:", err));
-    }
+    const trackingLinkChanged =
+      body.trackingLink && body.trackingLink !== existing.trackingLink;
+    const paymentLinkChanged =
+      body.paymentLink && body.paymentLink !== existing.paymentLink;
 
-    if (body.paymentLink && body.paymentLink !== existing.paymentLink) {
-      sendLinkNotificationEmail(
-        repair.clientEmail, clientName, repair.token, repair.macModel,
-        "payment", body.paymentLink
-      ).catch((err) => console.error("Failed to send payment link email:", err));
+    if (trackingLinkChanged || paymentLinkChanged) {
+      after(async () => {
+        if (trackingLinkChanged) {
+          try {
+            await sendLinkNotificationEmail(
+              repair.clientEmail, clientName, repair.token, repair.macModel,
+              "tracking", body.trackingLink
+            );
+          } catch (err) {
+            console.error("Failed to send tracking link email:", err);
+          }
+        }
+        if (paymentLinkChanged) {
+          try {
+            await sendLinkNotificationEmail(
+              repair.clientEmail, clientName, repair.token, repair.macModel,
+              "payment", body.paymentLink
+            );
+          } catch (err) {
+            console.error("Failed to send payment link email:", err);
+          }
+        }
+      });
     }
 
     return NextResponse.json(repair);

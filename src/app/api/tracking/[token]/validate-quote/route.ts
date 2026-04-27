@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendQuoteValidatedEmail } from "@/lib/email";
 
@@ -47,12 +47,18 @@ export async function POST(
       },
     });
 
-    sendQuoteValidatedEmail(
-      repair.clientEmail,
-      `${repair.clientFirstName} ${repair.clientLastName}`,
-      repair.macModel,
-      repair.id
-    ).catch((err) => console.error("Failed to send quote validation email:", err));
+    after(async () => {
+      try {
+        await sendQuoteValidatedEmail(
+          repair.clientEmail,
+          `${repair.clientFirstName} ${repair.clientLastName}`,
+          repair.macModel,
+          repair.id
+        );
+      } catch (err) {
+        console.error("Failed to send quote validation email:", err);
+      }
+    });
 
     return NextResponse.json({
       message: "Devis valide avec succes",

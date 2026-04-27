@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { after } from "next/server";
 import { sendTrackingEmail, sendNewRepairNotification } from "@/lib/email";
 
 export async function GET(request: Request) {
@@ -194,22 +195,29 @@ export async function POST(request: Request) {
       },
     });
 
-    // Send tracking email to client (non-blocking)
-    sendTrackingEmail(
-      clientEmail,
-      `${clientFirstName} ${clientLastName}`,
-      token,
-      macModel
-    ).catch((err) => console.error("Failed to send tracking email:", err));
-
-    // Send notification to admin (non-blocking)
-    sendNewRepairNotification(
-      `${clientFirstName} ${clientLastName}`,
-      macModel,
-      faultType,
-      repairType,
-      repair.id
-    ).catch((err) => console.error("Failed to send admin notification:", err));
+    after(async () => {
+      try {
+        await sendTrackingEmail(
+          clientEmail,
+          `${clientFirstName} ${clientLastName}`,
+          token,
+          macModel
+        );
+      } catch (err) {
+        console.error("Failed to send tracking email:", err);
+      }
+      try {
+        await sendNewRepairNotification(
+          `${clientFirstName} ${clientLastName}`,
+          macModel,
+          faultType,
+          repairType,
+          repair.id
+        );
+      } catch (err) {
+        console.error("Failed to send admin notification:", err);
+      }
+    });
 
     return NextResponse.json(repair, { status: 201 });
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getStatusLabel, getStatusIcon } from "@/lib/constants";
+import { after } from "next/server";
 import { sendStatusUpdateEmail } from "@/lib/email";
 
 export async function PUT(
@@ -75,14 +76,20 @@ export async function PUT(
     const statusLabel = getStatusLabel(status, existing.repairType);
     const statusIcon = getStatusIcon(status, existing.repairType);
 
-    sendStatusUpdateEmail(
-      existing.clientEmail,
-      `${existing.clientFirstName} ${existing.clientLastName}`,
-      existing.token,
-      existing.macModel,
-      statusLabel,
-      statusIcon
-    ).catch((err) => console.error("Failed to send status update email:", err));
+    after(async () => {
+      try {
+        await sendStatusUpdateEmail(
+          existing.clientEmail,
+          `${existing.clientFirstName} ${existing.clientLastName}`,
+          existing.token,
+          existing.macModel,
+          statusLabel,
+          statusIcon
+        );
+      } catch (err) {
+        console.error("Failed to send status update email:", err);
+      }
+    });
 
     return NextResponse.json(repair);
   } catch (error) {

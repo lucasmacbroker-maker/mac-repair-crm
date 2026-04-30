@@ -65,6 +65,9 @@ model Repair {
   updatedAt        DateTime @updatedAt
   closedAt         DateTime?
 
+  // Appointment (LOCAL repairs)
+  appointmentDate  DateTime?
+
   // Quote validation
   quoteValidated   Boolean  @default(false)
   quoteValidatedAt DateTime?

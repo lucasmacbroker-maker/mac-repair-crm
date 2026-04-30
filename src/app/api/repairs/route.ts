@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { after } from "next/server";
-import { sendTrackingEmail, sendNewRepairNotification } from "@/lib/email";
+import { sendTrackingEmail, sendNewRepairNotification, sendAppointmentConfirmationEmail } from "@/lib/email";
 
 export async function GET(request: Request) {
   try {
@@ -128,6 +128,7 @@ export async function POST(request: Request) {
       estimatedCost,
       estimatedReturn,
       technicianId,
+      appointmentDate,
     } = body;
 
     if (!clientFirstName || !clientLastName || !clientEmail || !clientPhone) {
@@ -174,6 +175,7 @@ export async function POST(request: Request) {
         carrier: carrier || "",
         estimatedCost: estimatedCost || 0,
         estimatedReturn: estimatedReturn ? new Date(estimatedReturn) : null,
+        appointmentDate: appointmentDate ? new Date(appointmentDate) : null,
         technicianId: technicianId || null,
         statusChanges: {
           create: {
@@ -216,6 +218,19 @@ export async function POST(request: Request) {
         );
       } catch (err) {
         console.error("Failed to send admin notification:", err);
+      }
+      if (appointmentDate && repairType === "LOCAL") {
+        try {
+          await sendAppointmentConfirmationEmail(
+            clientEmail,
+            `${clientFirstName} ${clientLastName}`,
+            token,
+            macModel,
+            new Date(appointmentDate)
+          );
+        } catch (err) {
+          console.error("Failed to send appointment confirmation:", err);
+        }
       }
     });
 

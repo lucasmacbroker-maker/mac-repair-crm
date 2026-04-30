@@ -213,6 +213,66 @@ export async function sendNewRepairNotification(
   }
 }
 
+export async function sendAppointmentConfirmationEmail(
+  email: string,
+  clientName: string,
+  token: string,
+  macModel: string,
+  appointmentDate: Date,
+) {
+  const trackingUrl = `${APP_URL}/suivi/${token}`;
+
+  const dateStr = appointmentDate.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const timeStr = appointmentDate.toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  try {
+    await transporter.sendMail({
+      from: FROM,
+      to: email,
+      subject: `${COMPANY} — Confirmation de votre rendez-vous`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <h1 style="color: #1d1d1f; font-size: 24px; font-weight: 600;">Bonjour ${clientName},</h1>
+          <p style="color: #424245; font-size: 16px; line-height: 1.6;">
+            Votre rendez-vous pour la réparation de votre <strong>${macModel}</strong> est confirmé.
+          </p>
+          <div style="background: #f5f5f7; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+            <span style="font-size: 32px;">📅</span>
+            <p style="color: #1d1d1f; font-size: 20px; font-weight: 600; margin: 12px 0 4px; text-transform: capitalize;">${dateStr}</p>
+            <p style="color: #0071e3; font-size: 24px; font-weight: 700; margin: 0;">${timeStr}</p>
+          </div>
+          <p style="color: #424245; font-size: 15px; line-height: 1.6;">
+            Merci de vous présenter à l'atelier à l'heure indiquée avec votre Mac.<br/>
+            ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS ? `<strong>Adresse :</strong> ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS}` : ""}
+          </p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${trackingUrl}" style="background-color: #0071e3; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 500;">
+              Voir mon dossier de suivi
+            </a>
+          </div>
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
+          <p style="color: #86868b; font-size: 13px;">
+            ${COMPANY}<br/>
+            ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS || ""}
+          </p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send appointment confirmation email:", error);
+    return false;
+  }
+}
+
 export async function sendQuoteValidatedEmail(
   clientEmail: string,
   clientName: string,

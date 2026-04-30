@@ -52,6 +52,9 @@ export default function NewRepairPage() {
   const [estimatedReturn, setEstimatedReturn] = useState("");
   const [technicianId, setTechnicianId] = useState("");
 
+  // Appointment (LOCAL only)
+  const [appointmentDate, setAppointmentDate] = useState("");
+
   // Notes
   const [internalNote, setInternalNote] = useState("");
 
@@ -104,6 +107,7 @@ export default function NewRepairPage() {
         priority,
         estimatedCost: estimatedCost ? parseFloat(estimatedCost) : 0,
         estimatedReturn: estimatedReturn || null,
+        appointmentDate: appointmentDate || null,
         technicianId: technicianId || null,
       };
 
@@ -386,6 +390,14 @@ export default function NewRepairPage() {
               value={estimatedReturn}
               onChange={(e) => setEstimatedReturn(e.target.value)}
             />
+            {repairType === "LOCAL" && (
+              <Input
+                label="Date et heure du rendez-vous"
+                type="datetime-local"
+                value={appointmentDate}
+                onChange={(e) => setAppointmentDate(e.target.value)}
+              />
+            )}
           </div>
         </Card>
 

@@ -93,6 +93,7 @@ interface Repair {
   estimatedCost: number;
   finalCost: number;
   estimatedReturn: string | null;
+  appointmentDate: string | null;
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;
@@ -142,6 +143,9 @@ export default function RepairDetailPage() {
   const [editData, setEditData] = useState<Record<string, string | number | null>>({});
   const [saving, setSaving] = useState(false);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
+
+  // Appointment
+  const [sendingConfirmation, setSendingConfirmation] = useState(false);
 
   // Attachments
   const [uploading, setUploading] = useState(false);
@@ -278,6 +282,23 @@ export default function RepairDetailPage() {
     }
   };
 
+  const handleSendAppointmentConfirmation = async () => {
+    setSendingConfirmation(true);
+    try {
+      const res = await fetch(`/api/repairs/${repairId}/appointment`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Erreur lors de l'envoi");
+        return;
+      }
+      toast.success("Email de confirmation envoyé !");
+    } catch {
+      toast.error("Erreur de connexion");
+    } finally {
+      setSendingConfirmation(false);
+    }
+  };
+
   // Edit repair
   const handleOpenEditModal = () => {
     if (!repair) return;
@@ -302,6 +323,9 @@ export default function RepairDetailPage() {
       estimatedCost: repair.estimatedCost,
       finalCost: repair.finalCost,
       technicianId: repair.technicianId,
+      appointmentDate: repair.appointmentDate
+        ? new Date(repair.appointmentDate).toISOString().slice(0, 16)
+        : "",
     });
     setShowEditModal(true);
   };
@@ -617,6 +641,58 @@ export default function RepairDetailPage() {
           </div>
         </Card>
       </div>
+
+      {/* Appointment card — LOCAL repairs only */}
+      {repair.repairType === "LOCAL" && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Rendez-vous</CardTitle>
+            {repair.appointmentDate && (
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={sendingConfirmation}
+                onClick={handleSendAppointmentConfirmation}
+              >
+                <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Renvoyer la confirmation
+              </Button>
+            )}
+          </CardHeader>
+          {repair.appointmentDate ? (
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">📅</span>
+              </div>
+              <div>
+                <p className="text-base font-semibold text-[#1d1d1f] capitalize">
+                  {new Date(repair.appointmentDate).toLocaleDateString("fr-FR", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+                <p className="text-lg font-bold text-[#0071e3]">
+                  {new Date(repair.appointmentDate).toLocaleTimeString("fr-FR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[#86868b]">Aucun rendez-vous planifié.</p>
+              <Button variant="secondary" size="sm" onClick={handleOpenEditModal}>
+                Planifier un RDV
+              </Button>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Status timeline */}
       <Card className="mb-6">
@@ -1037,6 +1113,14 @@ export default function RepairDetailPage() {
               value={String(editData.finalCost || "")}
               onChange={(e) => setEditData({ ...editData, finalCost: parseFloat(e.target.value) || 0 })}
             />
+            {repair?.repairType === "LOCAL" && (
+              <Input
+                label="Date et heure du rendez-vous"
+                type="datetime-local"
+                value={String(editData.appointmentDate || "")}
+                onChange={(e) => setEditData({ ...editData, appointmentDate: e.target.value || null })}
+              />
+            )}
           </div>
         </div>
         <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-gray-100">

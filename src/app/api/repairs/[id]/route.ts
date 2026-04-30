@@ -140,6 +140,12 @@ export async function PUT(
         : null;
     }
 
+    if (body.appointmentDate !== undefined) {
+      data.appointmentDate = body.appointmentDate
+        ? new Date(body.appointmentDate)
+        : null;
+    }
+
     const repair = await prisma.repair.update({
       where: { id },
       data,

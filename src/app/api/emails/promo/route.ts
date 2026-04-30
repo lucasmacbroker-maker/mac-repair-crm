@@ -1,11 +1,10 @@
-import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
+import { NextResponse, after } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
 import { sendPromoEmail } from "@/lib/email";
-import { after } from "next/server";
 
 export async function POST(request: Request) {
-  const auth = await verifyAuth(request);
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
   const { recipients, subject, introText, products } = body as {

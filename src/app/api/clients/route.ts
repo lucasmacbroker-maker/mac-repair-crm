@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(request: Request) {
-  const auth = await verifyAuth(request);
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const repairs = await prisma.repair.findMany({
     select: {

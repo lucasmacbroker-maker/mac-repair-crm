@@ -66,11 +66,6 @@ export const PART_CATEGORIES = [
   "Visserie",
   "MacBook Air",
   "MacBook Pro",
-  "Mac mini",
-  "iMac",
-  "iPad",
-  "iPhone",
-  "Accessoire Apple",
   "Autre",
 ] as const;
 

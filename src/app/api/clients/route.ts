@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   const auth = await verifyAuth(request);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const repairs = await db.repair.findMany({
+  const repairs = await prisma.repair.findMany({
     select: {
       clientFirstName: true,
       clientLastName: true,

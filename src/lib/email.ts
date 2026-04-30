@@ -13,6 +13,7 @@ const transporter = nodemailer.createTransport({
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const FROM = process.env.SMTP_FROM || "Mac Place <lucas.macbroker@gmail.com>";
 const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME || "Mac Place";
+const COMPANY_ADDRESS = process.env.COMPANY_ADDRESS || COMPANY_ADDRESS || "";
 
 export async function sendTrackingEmail(
   email: string,
@@ -48,7 +49,7 @@ export async function sendTrackingEmail(
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
           <p style="color: #86868b; font-size: 13px;">
             ${COMPANY}<br/>
-            ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS || ""}
+            ${COMPANY_ADDRESS || ""}
           </p>
         </div>
       `,
@@ -93,7 +94,7 @@ export async function sendStatusUpdateEmail(
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
           <p style="color: #86868b; font-size: 13px;">
             ${COMPANY}<br/>
-            ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS || ""}
+            ${COMPANY_ADDRESS || ""}
           </p>
         </div>
       `,
@@ -155,7 +156,7 @@ export async function sendLinkNotificationEmail(
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
           <p style="color: #86868b; font-size: 13px;">
             ${COMPANY}<br/>
-            ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS || ""}
+            ${COMPANY_ADDRESS || ""}
           </p>
         </div>
       `,
@@ -201,7 +202,7 @@ export async function sendNewRepairNotification(
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
           <p style="color: #86868b; font-size: 13px;">
             ${COMPANY}<br/>
-            ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS || ""}
+            ${COMPANY_ADDRESS || ""}
           </p>
         </div>
       `,
@@ -251,7 +252,7 @@ export async function sendAppointmentConfirmationEmail(
           </div>
           <p style="color: #424245; font-size: 15px; line-height: 1.6;">
             Merci de vous présenter à l'atelier à l'heure indiquée avec votre Mac.<br/>
-            ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS ? `<strong>Adresse :</strong> ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS}` : ""}
+            ${COMPANY_ADDRESS ? `<strong>Adresse :</strong> ${COMPANY_ADDRESS}` : ""}
           </p>
           <div style="text-align: center; margin: 32px 0;">
             <a href="${trackingUrl}" style="background-color: #0071e3; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 500;">
@@ -261,7 +262,7 @@ export async function sendAppointmentConfirmationEmail(
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
           <p style="color: #86868b; font-size: 13px;">
             ${COMPANY}<br/>
-            ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS || ""}
+            ${COMPANY_ADDRESS || ""}
           </p>
         </div>
       `,
@@ -301,7 +302,7 @@ export async function sendQuoteValidatedEmail(
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
           <p style="color: #86868b; font-size: 13px;">
             ${COMPANY}<br/>
-            ${process.env.NEXT_PUBLIC_COMPANY_ADDRESS || ""}
+            ${COMPANY_ADDRESS || ""}
           </p>
         </div>
       `,

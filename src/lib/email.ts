@@ -214,6 +214,65 @@ export async function sendNewRepairNotification(
   }
 }
 
+export async function sendPromoEmail(
+  recipients: { email: string; firstName: string }[],
+  subject: string,
+  introText: string,
+  products: { name: string; description: string; price: number }[],
+) {
+  const productsHtml = products
+    .map(
+      (p) => `
+      <div style="border: 1px solid #e5e5e5; border-radius: 12px; padding: 20px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <p style="color: #1d1d1f; font-size: 16px; font-weight: 600; margin: 0 0 4px;">${p.name}</p>
+          ${p.description ? `<p style="color: #86868b; font-size: 14px; margin: 0;">${p.description}</p>` : ""}
+        </div>
+        <div style="text-align: right; flex-shrink: 0; margin-left: 16px;">
+          <p style="color: #0071e3; font-size: 18px; font-weight: 700; margin: 0;">${p.price.toFixed(2)} €</p>
+        </div>
+      </div>`,
+    )
+    .join("");
+
+  let sent = 0;
+  for (const recipient of recipients) {
+    try {
+      await transporter.sendMail({
+        from: FROM,
+        to: recipient.email,
+        subject,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <h1 style="color: #1d1d1f; font-size: 28px; font-weight: 700; margin: 0;">${COMPANY}</h1>
+              <p style="color: #86868b; font-size: 14px; margin: 8px 0 0;">Nos dernières nouveautés</p>
+            </div>
+            <h2 style="color: #1d1d1f; font-size: 20px; font-weight: 600;">Bonjour ${recipient.firstName},</h2>
+            <p style="color: #424245; font-size: 16px; line-height: 1.6; margin-bottom: 32px;">${introText}</p>
+            <h3 style="color: #1d1d1f; font-size: 17px; font-weight: 600; margin-bottom: 16px;">Produits disponibles</h3>
+            ${productsHtml}
+            <div style="text-align: center; margin: 40px 0 24px;">
+              <p style="color: #424245; font-size: 15px;">Pour plus d'informations ou pour réserver un produit, contactez-nous :</p>
+              <p style="color: #0071e3; font-size: 15px; font-weight: 500;">${process.env.NEXT_PUBLIC_COMPANY_EMAIL || ""}</p>
+              <p style="color: #0071e3; font-size: 15px; font-weight: 500;">${process.env.NEXT_PUBLIC_COMPANY_PHONE || ""}</p>
+            </div>
+            <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
+            <p style="color: #86868b; font-size: 12px; text-align: center;">
+              ${COMPANY}${ADDR ? ` — ${ADDR}` : ""}<br/>
+              <span style="color: #c7c7cc;">Vous recevez ce mail car vous êtes client ${COMPANY}.</span>
+            </p>
+          </div>
+        `,
+      });
+      sent++;
+    } catch {
+      // continue sending to others
+    }
+  }
+  return sent;
+}
+
 export async function sendAppointmentConfirmationEmail(
   email: string,
   clientName: string,

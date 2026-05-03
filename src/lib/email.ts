@@ -279,6 +279,8 @@ export async function sendAppointmentConfirmationEmail(
   token: string,
   macModel: string,
   appointmentDate: Date,
+  isHome = false,
+  clientAddress = "",
 ) {
   const trackingUrl = `${APP_URL}/suivi/${token}`;
 
@@ -293,6 +295,14 @@ export async function sendAppointmentConfirmationEmail(
     minute: "2-digit",
   });
 
+  const locationLine = isHome
+    ? clientAddress
+      ? `Notre technicien se déplacera à votre adresse :<br/><strong>${clientAddress}</strong>`
+      : `Notre technicien se déplacera à votre domicile à l'heure indiquée.`
+    : ADDR
+    ? `Merci de vous présenter à l'atelier à l'heure indiquée avec votre Mac.<br/><strong>Adresse :</strong> ${ADDR}`
+    : `Merci de vous présenter à l'atelier à l'heure indiquée avec votre Mac.`;
+
   try {
     await transporter.sendMail({
       from: FROM,
@@ -302,16 +312,15 @@ export async function sendAppointmentConfirmationEmail(
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
           <h1 style="color: #1d1d1f; font-size: 24px; font-weight: 600;">Bonjour ${clientName},</h1>
           <p style="color: #424245; font-size: 16px; line-height: 1.6;">
-            Votre rendez-vous pour la réparation de votre <strong>${macModel}</strong> est confirmé.
+            Votre rendez-vous ${isHome ? "à domicile" : "en atelier"} pour la réparation de votre <strong>${macModel}</strong> est confirmé.
           </p>
           <div style="background: #f5f5f7; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
-            <span style="font-size: 32px;">📅</span>
+            <span style="font-size: 32px;">${isHome ? "🏠" : "📅"}</span>
             <p style="color: #1d1d1f; font-size: 20px; font-weight: 600; margin: 12px 0 4px; text-transform: capitalize;">${dateStr}</p>
             <p style="color: #0071e3; font-size: 24px; font-weight: 700; margin: 0;">${timeStr}</p>
           </div>
           <p style="color: #424245; font-size: 15px; line-height: 1.6;">
-            Merci de vous présenter à l'atelier à l'heure indiquée avec votre Mac.<br/>
-            ${ADDR ? `<strong>Adresse :</strong> ${ADDR}` : ""}
+            ${locationLine}
           </p>
           <div style="text-align: center; margin: 32px 0;">
             <a href="${trackingUrl}" style="background-color: #0071e3; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 500;">

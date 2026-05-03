@@ -44,7 +44,7 @@ export default function NewRepairPage() {
   const [faultDescription, setFaultDescription] = useState("");
 
   // Repair info
-  const [repairType, setRepairType] = useState<"POSTAL" | "LOCAL">("LOCAL");
+  const [repairType, setRepairType] = useState<"POSTAL" | "LOCAL" | "HOME">("LOCAL");
   const [priority, setPriority] = useState("NORMAL");
   const [inboundTracking, setInboundTracking] = useState("");
   const [carrier, setCarrier] = useState("");
@@ -288,59 +288,40 @@ export default function NewRepairPage() {
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Type de reparation <span className="text-red-500">*</span>
             </label>
-            <div className="flex gap-4">
-              <label
-                className={`
-                  flex-1 flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all
-                  ${repairType === "LOCAL" ? "border-[#0071e3] bg-blue-50/50" : "border-gray-200 hover:border-gray-300"}
-                `}
-              >
-                <input
-                  type="radio"
-                  name="repairType"
-                  value="LOCAL"
-                  checked={repairType === "LOCAL"}
-                  onChange={() => setRepairType("LOCAL")}
-                  className="sr-only"
-                />
-                <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                  repairType === "LOCAL" ? "border-[#0071e3]" : "border-gray-300"
-                }`}>
-                  {repairType === "LOCAL" && (
-                    <div className="h-2.5 w-2.5 rounded-full bg-[#0071e3]" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium text-sm text-[#1d1d1f]">Atelier (Local)</p>
-                  <p className="text-xs text-[#86868b]">Le client depose son Mac en atelier</p>
-                </div>
-              </label>
-              <label
-                className={`
-                  flex-1 flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all
-                  ${repairType === "POSTAL" ? "border-[#0071e3] bg-blue-50/50" : "border-gray-200 hover:border-gray-300"}
-                `}
-              >
-                <input
-                  type="radio"
-                  name="repairType"
-                  value="POSTAL"
-                  checked={repairType === "POSTAL"}
-                  onChange={() => setRepairType("POSTAL")}
-                  className="sr-only"
-                />
-                <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                  repairType === "POSTAL" ? "border-[#0071e3]" : "border-gray-300"
-                }`}>
-                  {repairType === "POSTAL" && (
-                    <div className="h-2.5 w-2.5 rounded-full bg-[#0071e3]" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium text-sm text-[#1d1d1f]">Postal</p>
-                  <p className="text-xs text-[#86868b]">Le client envoie son Mac par colis</p>
-                </div>
-              </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { value: "LOCAL", label: "Atelier (Local)", desc: "Le client dépose son Mac en atelier" },
+                { value: "HOME", label: "À domicile", desc: "Le technicien se déplace chez le client" },
+                { value: "POSTAL", label: "Postal", desc: "Le client envoie son Mac par colis" },
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  className={`
+                    flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all
+                    ${repairType === option.value ? "border-[#0071e3] bg-blue-50/50" : "border-gray-200 hover:border-gray-300"}
+                  `}
+                >
+                  <input
+                    type="radio"
+                    name="repairType"
+                    value={option.value}
+                    checked={repairType === option.value}
+                    onChange={() => setRepairType(option.value as "LOCAL" | "HOME" | "POSTAL")}
+                    className="sr-only"
+                  />
+                  <div className={`h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                    repairType === option.value ? "border-[#0071e3]" : "border-gray-300"
+                  }`}>
+                    {repairType === option.value && (
+                      <div className="h-2.5 w-2.5 rounded-full bg-[#0071e3]" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-[#1d1d1f]">{option.label}</p>
+                    <p className="text-xs text-[#86868b]">{option.desc}</p>
+                  </div>
+                </label>
+              ))}
             </div>
           </div>
 
@@ -390,7 +371,7 @@ export default function NewRepairPage() {
               value={estimatedReturn}
               onChange={(e) => setEstimatedReturn(e.target.value)}
             />
-            {repairType === "LOCAL" && (
+            {(repairType === "LOCAL" || repairType === "HOME") && (
               <Input
                 label="Date et heure du rendez-vous"
                 type="datetime-local"

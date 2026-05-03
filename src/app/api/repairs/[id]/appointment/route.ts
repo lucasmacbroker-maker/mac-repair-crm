@@ -30,6 +30,8 @@ export async function POST(
 
     const clientName = `${repair.clientFirstName} ${repair.clientLastName}`;
 
+    const fullClientAddress = [repair.clientAddress, repair.clientPostalCode, repair.clientCity].filter(Boolean).join(", ");
+
     after(async () => {
       try {
         await sendAppointmentConfirmationEmail(
@@ -38,6 +40,8 @@ export async function POST(
           repair.token,
           repair.macModel,
           repair.appointmentDate!,
+          repair.repairType === "HOME",
+          fullClientAddress,
         );
       } catch (err) {
         console.error("Failed to send appointment confirmation:", err);

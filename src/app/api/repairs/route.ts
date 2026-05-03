@@ -145,7 +145,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!["POSTAL", "LOCAL"].includes(repairType)) {
+    if (!["POSTAL", "LOCAL", "HOME"].includes(repairType)) {
       return NextResponse.json(
         { error: "Type de réparation invalide" },
         { status: 400 }
@@ -219,14 +219,17 @@ export async function POST(request: Request) {
       } catch (err) {
         console.error("Failed to send admin notification:", err);
       }
-      if (appointmentDate && repairType === "LOCAL") {
+      if (appointmentDate && (repairType === "LOCAL" || repairType === "HOME")) {
+        const fullClientAddress = [clientAddress, clientPostalCode, clientCity].filter(Boolean).join(", ");
         try {
           await sendAppointmentConfirmationEmail(
             clientEmail,
             `${clientFirstName} ${clientLastName}`,
             token,
             macModel,
-            new Date(appointmentDate)
+            new Date(appointmentDate),
+            repairType === "HOME",
+            fullClientAddress,
           );
         } catch (err) {
           console.error("Failed to send appointment confirmation:", err);

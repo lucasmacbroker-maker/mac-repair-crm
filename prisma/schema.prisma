@@ -142,6 +142,15 @@ model RepairPart {
   createdAt DateTime @default(now())
 }
 
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String   @default("")
+  source    String   @default("import") // "import" or "manual"
+  createdAt DateTime @default(now())
+}
+
 model RepairAttachment {
   id         String   @id @default(uuid())
   repairId   String

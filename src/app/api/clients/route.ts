@@ -6,6 +6,7 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Clients from repairs
   const repairs = await prisma.repair.findMany({
     select: {
       clientFirstName: true,
@@ -17,14 +18,13 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  // Deduplicate by email, keep most recent repair info
   const map = new Map<string, {
     firstName: string;
     lastName: string;
     email: string;
     phone: string;
     repairCount: number;
-    lastRepair: Date;
+    source: string;
   }>();
 
   for (const r of repairs) {
@@ -39,13 +39,31 @@ export async function GET() {
         email: r.clientEmail,
         phone: r.clientPhone,
         repairCount: 1,
-        lastRepair: r.createdAt,
+        source: "repair",
       });
     }
   }
 
+  // Imported clients (only add those not already from repairs)
+  const imported = await prisma.client.findMany({ orderBy: { name: "asc" } });
+  for (const c of imported) {
+    const email = c.email.toLowerCase().trim();
+    if (map.has(email)) continue;
+    const parts = c.name.trim().split(/\s+/);
+    const firstName = parts[0] ?? c.name;
+    const lastName = parts.slice(1).join(" ");
+    map.set(email, {
+      firstName,
+      lastName,
+      email: c.email,
+      phone: c.phone,
+      repairCount: 0,
+      source: "import",
+    });
+  }
+
   const clients = Array.from(map.values()).sort((a, b) =>
-    a.lastName.localeCompare(b.lastName),
+    (a.lastName || a.firstName).localeCompare(b.lastName || b.firstName),
   );
 
   return NextResponse.json({ clients });

@@ -1,14 +1,31 @@
-// Statuts de réparation (identiques pour tous les types)
-export const REPAIR_STATUSES = [
-  { key: "PENDING", label: "Mac déposé en atelier", icon: "🏪" },
-  { key: "RECEIVED", label: "Diagnostic en cours", icon: "🔍" },
-  { key: "REPAIRING", label: "Réparation en cours", icon: "🔧" },
-  { key: "DONE", label: "Réparation terminée — client à prévenir", icon: "✅" },
-  { key: "CLOSED", label: "Mac récupéré — dossier clôturé", icon: "🏁" },
+export const STATUSES_LOCAL = [
+  { key: "PENDING",   label: "Mac déposé en atelier", icon: "🏪" },
+  { key: "RECEIVED",  label: "Diagnostic en cours",   icon: "🔍" },
+  { key: "REPAIRING", label: "Réparation en cours",   icon: "🔧" },
+  { key: "DONE",      label: "Réparation terminée",   icon: "✅" },
 ] as const;
 
-export function getStatuses(_repairType?: string) {
-  return REPAIR_STATUSES;
+export const STATUSES_HOME = [
+  { key: "PENDING",   label: "Réparation à venir",  icon: "🗓️" },
+  { key: "REPAIRING", label: "Réparation en cours", icon: "🔧" },
+  { key: "DONE",      label: "Réparation terminée", icon: "✅" },
+] as const;
+
+export const STATUSES_POSTAL = [
+  { key: "PENDING",   label: "En attente de réception",          icon: "📦" },
+  { key: "RECEIVED",  label: "Mac reçu — diagnostic en cours",   icon: "🔍" },
+  { key: "REPAIRING", label: "Réparation en cours",              icon: "🔧" },
+  { key: "DONE",      label: "Réparation terminée — expédition", icon: "✅" },
+  { key: "CLOSED",    label: "Mac expédié — dossier clôturé",    icon: "🏁" },
+] as const;
+
+// Keep for backward compat
+export const REPAIR_STATUSES = STATUSES_LOCAL;
+
+export function getStatuses(repairType?: string) {
+  if (repairType === "HOME") return STATUSES_HOME;
+  if (repairType === "POSTAL") return STATUSES_POSTAL;
+  return STATUSES_LOCAL;
 }
 
 export function getStatusLabel(status: string, repairType: string): string {

@@ -345,6 +345,8 @@ export default function TrackingPage() {
             <p className="text-xs uppercase tracking-wider text-[#86868b] mb-1">
               {repair.repairType === "POSTAL"
                 ? "Date d'envoi"
+                : repair.repairType === "HOME"
+                ? "Date de création"
                 : "Date de depot"}
             </p>
             <p className="text-[#1d1d1f] font-medium">
@@ -368,6 +370,8 @@ export default function TrackingPage() {
             <p className="text-[#1d1d1f] font-medium">
               {repair.repairType === "POSTAL"
                 ? "Envoi postal"
+                : repair.repairType === "HOME"
+                ? "À domicile"
                 : "Atelier local"}
             </p>
           </div>

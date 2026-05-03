@@ -516,8 +516,8 @@ export default function RepairDetailPage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-[#86868b]">Type</span>
-              <Badge variant={repair.repairType === "POSTAL" ? "purple" : "info"}>
-                {repair.repairType === "POSTAL" ? "Postal" : "Atelier"}
+              <Badge variant={repair.repairType === "POSTAL" ? "purple" : repair.repairType === "HOME" ? "warning" : "info"}>
+                {repair.repairType === "POSTAL" ? "Postal" : repair.repairType === "HOME" ? "À domicile" : "Atelier"}
               </Badge>
             </div>
             <div className="flex justify-between">

@@ -38,6 +38,26 @@ export default function StockPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm("Supprimer ce produit du stock ?")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/stock/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Produit supprimé");
+        setParts((prev) => prev.filter((p) => p.id !== id));
+      } else {
+        toast.error("Erreur lors de la suppression");
+      }
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const fetchParts = useCallback(async () => {
     setLoading(true);
@@ -210,13 +230,22 @@ export default function StockPage() {
                         {part.sellPrice.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
                       </td>
                       <td className="px-4 py-3">
-                        <Link
-                          href={`/admin/stock/${part.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[#0071e3] hover:text-[#0077ed] text-sm font-medium"
-                        >
-                          Voir
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          <Link
+                            href={`/admin/stock/${part.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[#0071e3] hover:text-[#0077ed] text-sm font-medium"
+                          >
+                            Voir
+                          </Link>
+                          <button
+                            onClick={(e) => handleDelete(e, part.id)}
+                            disabled={deletingId === part.id}
+                            className="text-red-500 hover:text-red-700 text-sm font-medium disabled:opacity-50"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

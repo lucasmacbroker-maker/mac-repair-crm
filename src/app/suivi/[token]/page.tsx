@@ -52,6 +52,7 @@ interface Repair {
   closedAt: string | null;
   quoteValidated: boolean;
   quoteValidatedAt: string | null;
+  appointmentDate: string | null;
   notes: Note[];
   statusChanges: StatusChange[];
   attachments: Attachment[];
@@ -440,30 +441,40 @@ export default function TrackingPage() {
 
                 {/* Label & timestamp */}
                 <div className="pt-1.5 min-w-0">
-                  <p
-                    className={`text-sm leading-snug transition-colors duration-300 ${
-                      isCompleted
-                        ? "text-green-700 font-medium"
-                        : isCurrent
-                          ? "text-[#1d1d1f] font-semibold text-base"
+                  {(() => {
+                    const isUpcoming = step.key === "PENDING"
+                      && (repair.repairType === "LOCAL" || repair.repairType === "HOME")
+                      && repair.appointmentDate
+                      && new Date(repair.appointmentDate) > new Date();
+                    const displayLabel = isUpcoming ? "À venir" : step.label;
+                    return (
+                      <>
+                        <p className={`text-sm leading-snug transition-colors duration-300 ${
+                          isCompleted ? "text-green-700 font-medium"
+                          : isCurrent ? "text-[#1d1d1f] font-semibold text-base"
                           : "text-[#86868b]"
-                    }`}
-                  >
-                    {step.label}
-                  </p>
-                  {(isCompleted || isCurrent) && timestamp && (
-                    <p className="text-xs text-[#86868b] mt-0.5">
-                      {formatDateTime(timestamp)}
-                    </p>
-                  )}
-                  {isCurrent && (
-                    <span className="inline-block mt-2 px-3 py-1 bg-blue-50 text-[#0071e3] text-xs font-medium rounded-full">
-                      Statut actuel
-                    </span>
-                  )}
-                  {isFuture && (
-                    <p className="text-xs text-[#c7c7cc] mt-0.5">En attente</p>
-                  )}
+                        }`}>
+                          {displayLabel}
+                        </p>
+                        {isCurrent && repair.appointmentDate && (repair.repairType === "LOCAL" || repair.repairType === "HOME") && (
+                          <p className="text-sm font-semibold text-[#0071e3] mt-1">
+                            {new Date(repair.appointmentDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })} à {new Date(repair.appointmentDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        )}
+                        {(isCompleted || isCurrent) && timestamp && !repair.appointmentDate && (
+                          <p className="text-xs text-[#86868b] mt-0.5">{formatDateTime(timestamp)}</p>
+                        )}
+                        {isCurrent && (
+                          <span className="inline-block mt-2 px-3 py-1 bg-blue-50 text-[#0071e3] text-xs font-medium rounded-full">
+                            Statut actuel
+                          </span>
+                        )}
+                        {isFuture && (
+                          <p className="text-xs text-[#c7c7cc] mt-0.5">En attente</p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             );

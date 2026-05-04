@@ -107,7 +107,7 @@ export default function NewRepairPage() {
         priority,
         estimatedCost: estimatedCost ? parseFloat(estimatedCost) : 0,
         estimatedReturn: estimatedReturn || null,
-        appointmentDate: appointmentDate || null,
+        appointmentDate: appointmentDate ? new Date(appointmentDate).toISOString() : null,
         technicianId: technicianId || null,
       };
 

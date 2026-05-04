@@ -28,12 +28,19 @@ export function getStatuses(repairType?: string) {
   return STATUSES_LOCAL;
 }
 
-export function getStatusLabel(status: string, repairType: string): string {
+export function getStatusLabel(status: string, repairType: string, appointmentDate?: string | null): string {
+  // LOCAL/HOME + PENDING + future appointment → "À venir"
+  if (status === "PENDING" && (repairType === "LOCAL" || repairType === "HOME") && appointmentDate) {
+    if (new Date(appointmentDate) > new Date()) return "À venir";
+  }
   const statuses = getStatuses(repairType);
   return statuses.find((s) => s.key === status)?.label || status;
 }
 
-export function getStatusIcon(status: string, repairType: string): string {
+export function getStatusIcon(status: string, repairType: string, appointmentDate?: string | null): string {
+  if (status === "PENDING" && (repairType === "LOCAL" || repairType === "HOME") && appointmentDate) {
+    if (new Date(appointmentDate) > new Date()) return "🗓️";
+  }
   const statuses = getStatuses(repairType);
   return statuses.find((s) => s.key === status)?.icon || "📋";
 }

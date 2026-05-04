@@ -342,7 +342,12 @@ export default function RepairDetailPage() {
       const res = await fetch(`/api/repairs/${repairId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editData),
+        body: JSON.stringify({
+        ...editData,
+        appointmentDate: editData.appointmentDate
+          ? new Date(editData.appointmentDate).toISOString()
+          : null,
+      }),
       });
 
       if (!res.ok) {
@@ -1054,57 +1059,63 @@ export default function RepairDetailPage() {
               value={String(editData.faultType || "")}
               onChange={(e) => setEditData({ ...editData, faultType: e.target.value })}
             />
-            <Select
-              label="Priorite"
-              options={PRIORITIES.map((p) => ({ value: p.key, label: p.label }))}
-              value={String(editData.priority || "")}
-              onChange={(e) => setEditData({ ...editData, priority: e.target.value })}
-            />
+            {repair?.repairType === "POSTAL" && (
+              <Select
+                label="Priorite"
+                options={PRIORITIES.map((p) => ({ value: p.key, label: p.label }))}
+                value={String(editData.priority || "")}
+                onChange={(e) => setEditData({ ...editData, priority: e.target.value })}
+              />
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="Technicien"
-              options={[
-                { value: "", label: "Non assigne" },
-                ...technicians.map((t) => ({
-                  value: t.id,
-                  label: `${t.firstName} ${t.lastName}`,
-                })),
-              ]}
-              value={String(editData.technicianId || "")}
-              onChange={(e) => setEditData({ ...editData, technicianId: e.target.value || null })}
-            />
-            <Select
-              label="Transporteur"
-              options={[
-                { value: "", label: "Aucun" },
-                ...CARRIERS.map((c) => ({ value: c, label: c })),
-              ]}
-              value={String(editData.carrier || "")}
-              onChange={(e) => setEditData({ ...editData, carrier: e.target.value })}
-            />
-            <Input
-              label="Suivi entrant"
-              value={String(editData.inboundTracking || "")}
-              onChange={(e) => setEditData({ ...editData, inboundTracking: e.target.value })}
-            />
-            <Input
-              label="Suivi sortant"
-              value={String(editData.outboundTracking || "")}
-              onChange={(e) => setEditData({ ...editData, outboundTracking: e.target.value })}
-            />
-            <Input
-              label="Lien suivi Chronopost"
-              placeholder="https://www.chronopost.fr/..."
-              value={String(editData.trackingLink || "")}
-              onChange={(e) => setEditData({ ...editData, trackingLink: e.target.value })}
-            />
-            <Input
-              label="Lien de paiement"
-              placeholder="https://..."
-              value={String(editData.paymentLink || "")}
-              onChange={(e) => setEditData({ ...editData, paymentLink: e.target.value })}
-            />
+            {repair?.repairType === "POSTAL" && (
+              <>
+                <Select
+                  label="Technicien"
+                  options={[
+                    { value: "", label: "Non assigne" },
+                    ...technicians.map((t) => ({
+                      value: t.id,
+                      label: `${t.firstName} ${t.lastName}`,
+                    })),
+                  ]}
+                  value={String(editData.technicianId || "")}
+                  onChange={(e) => setEditData({ ...editData, technicianId: e.target.value || null })}
+                />
+                <Select
+                  label="Transporteur"
+                  options={[
+                    { value: "", label: "Aucun" },
+                    ...CARRIERS.map((c) => ({ value: c, label: c })),
+                  ]}
+                  value={String(editData.carrier || "")}
+                  onChange={(e) => setEditData({ ...editData, carrier: e.target.value })}
+                />
+                <Input
+                  label="Suivi entrant"
+                  value={String(editData.inboundTracking || "")}
+                  onChange={(e) => setEditData({ ...editData, inboundTracking: e.target.value })}
+                />
+                <Input
+                  label="Suivi sortant"
+                  value={String(editData.outboundTracking || "")}
+                  onChange={(e) => setEditData({ ...editData, outboundTracking: e.target.value })}
+                />
+                <Input
+                  label="Lien suivi Chronopost"
+                  placeholder="https://www.chronopost.fr/..."
+                  value={String(editData.trackingLink || "")}
+                  onChange={(e) => setEditData({ ...editData, trackingLink: e.target.value })}
+                />
+                <Input
+                  label="Lien de paiement"
+                  placeholder="https://..."
+                  value={String(editData.paymentLink || "")}
+                  onChange={(e) => setEditData({ ...editData, paymentLink: e.target.value })}
+                />
+              </>
+            )}
             <Input
               label="Cout estime"
               type="number"
@@ -1119,7 +1130,7 @@ export default function RepairDetailPage() {
               value={String(editData.finalCost || "")}
               onChange={(e) => setEditData({ ...editData, finalCost: parseFloat(e.target.value) || 0 })}
             />
-            {repair?.repairType === "LOCAL" && (
+            {(repair?.repairType === "LOCAL" || repair?.repairType === "HOME") && (
               <Input
                 label="Date et heure du rendez-vous"
                 type="datetime-local"

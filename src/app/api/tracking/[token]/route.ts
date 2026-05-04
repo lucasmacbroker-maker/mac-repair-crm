@@ -34,6 +34,7 @@ export async function GET(
         closedAt: true,
         quoteValidated: true,
         quoteValidatedAt: true,
+        appointmentDate: true,
         notes: {
           where: { isInternal: false },
           select: {

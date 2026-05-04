@@ -382,15 +382,16 @@ export default function RepairDetailPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.error || "Erreur lors de l'envoi");
+        let errMsg = `Erreur ${res.status}`;
+        try { const d = await res.json(); errMsg = d.error || errMsg; } catch { errMsg += " (réponse non-JSON)"; }
+        toast.error(errMsg);
         return;
       }
 
       toast.success("Document ajoute");
       fetchRepair();
-    } catch {
-      toast.error("Erreur de connexion");
+    } catch (err) {
+      toast.error("Erreur: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setUploading(false);
       e.target.value = "";

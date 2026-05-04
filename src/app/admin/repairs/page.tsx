@@ -43,10 +43,21 @@ interface User {
 
 const allStatuses = REPAIR_STATUSES.map((s) => ({ value: s.key, label: s.label }));
 
+const repairTypeLabel = (type: string) =>
+  type === "POSTAL" ? "Postal" : type === "HOME" ? "À domicile" : "Atelier";
+
+const repairTypeColor = (type: string) =>
+  type === "POSTAL"
+    ? "bg-purple-50 text-purple-700"
+    : type === "HOME"
+    ? "bg-green-50 text-green-700"
+    : "bg-orange-50 text-orange-700";
+
 const repairTypeOptions = [
   { value: "", label: "Tous les types" },
   { value: "POSTAL", label: "Postal" },
   { value: "LOCAL", label: "Atelier" },
+  { value: "HOME", label: "À domicile" },
 ];
 
 const faultTypeOptions = [
@@ -339,12 +350,8 @@ export default function RepairsPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        repair.repairType === "POSTAL"
-                          ? "bg-purple-50 text-purple-700"
-                          : "bg-orange-50 text-orange-700"
-                      }`}>
-                        {repair.repairType === "POSTAL" ? "Postal" : "Atelier"}
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${repairTypeColor(repair.repairType)}`}>
+                        {repairTypeLabel(repair.repairType)}
                       </span>
                       {repair.quoteValidated && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
@@ -412,12 +419,8 @@ export default function RepairsPage() {
                         {repair.faultType}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          repair.repairType === "POSTAL"
-                            ? "bg-purple-50 text-purple-700"
-                            : "bg-orange-50 text-orange-700"
-                        }`}>
-                          {repair.repairType === "POSTAL" ? "Postal" : "Atelier"}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${repairTypeColor(repair.repairType)}`}>
+                          {repairTypeLabel(repair.repairType)}
                         </span>
                       </td>
                       <td className="px-4 py-3">

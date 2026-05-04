@@ -22,6 +22,12 @@ import {
   CARRIERS,
 } from "@/lib/constants";
 
+function toLocalDatetimeInput(dateStr: string) {
+  const d = new Date(dateStr);
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+}
+
 interface Technician {
   id: string;
   firstName: string;
@@ -324,7 +330,7 @@ export default function RepairDetailPage() {
       finalCost: repair.finalCost,
       technicianId: repair.technicianId,
       appointmentDate: repair.appointmentDate
-        ? new Date(repair.appointmentDate).toISOString().slice(0, 16)
+        ? toLocalDatetimeInput(repair.appointmentDate)
         : "",
     });
     setShowEditModal(true);

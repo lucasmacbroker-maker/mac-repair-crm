@@ -326,18 +326,6 @@ export default function NewRepairPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="Priorite"
-              options={priorityOptions}
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-            />
-            <Select
-              label="Technicien"
-              options={technicianOptions}
-              value={technicianId}
-              onChange={(e) => setTechnicianId(e.target.value)}
-            />
 
             {repairType === "POSTAL" && (
               <>

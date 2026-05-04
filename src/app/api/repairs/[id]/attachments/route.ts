@@ -68,9 +68,10 @@ export async function POST(
 
     return NextResponse.json(attachment, { status: 201 });
   } catch (error) {
-    console.error("Upload attachment error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Upload attachment error:", msg);
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      { error: `Erreur upload: ${msg}` },
       { status: 500 }
     );
   }

@@ -169,7 +169,7 @@ export async function POST(request: Request) {
         faultType,
         faultDescription: faultDescription || "",
         repairType,
-        status: "PENDING",
+        status: repairType === "LOCAL" ? "UPCOMING" : "PENDING",
         priority: priority || "NORMAL",
         inboundTracking: inboundTracking || "",
         carrier: carrier || "",
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
         statusChanges: {
           create: {
             fromStatus: "",
-            toStatus: "PENDING",
+            toStatus: repairType === "LOCAL" ? "UPCOMING" : "PENDING",
             userId: user.id,
           },
         },

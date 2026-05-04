@@ -1,4 +1,5 @@
 export const STATUSES_LOCAL = [
+  { key: "UPCOMING",  label: "Réparation à venir",    icon: "🗓️" },
   { key: "PENDING",   label: "Mac déposé en atelier", icon: "🏪" },
   { key: "RECEIVED",  label: "Diagnostic en cours",   icon: "🔍" },
   { key: "REPAIRING", label: "Réparation en cours",   icon: "🔧" },
@@ -28,19 +29,12 @@ export function getStatuses(repairType?: string) {
   return STATUSES_LOCAL;
 }
 
-export function getStatusLabel(status: string, repairType: string, appointmentDate?: string | null): string {
-  // LOCAL/HOME + PENDING + future appointment → "À venir"
-  if (status === "PENDING" && (repairType === "LOCAL" || repairType === "HOME") && appointmentDate) {
-    if (new Date(appointmentDate) > new Date()) return "À venir";
-  }
+export function getStatusLabel(status: string, repairType: string): string {
   const statuses = getStatuses(repairType);
   return statuses.find((s) => s.key === status)?.label || status;
 }
 
-export function getStatusIcon(status: string, repairType: string, appointmentDate?: string | null): string {
-  if (status === "PENDING" && (repairType === "LOCAL" || repairType === "HOME") && appointmentDate) {
-    if (new Date(appointmentDate) > new Date()) return "🗓️";
-  }
+export function getStatusIcon(status: string, repairType: string): string {
   const statuses = getStatuses(repairType);
   return statuses.find((s) => s.key === status)?.icon || "📋";
 }

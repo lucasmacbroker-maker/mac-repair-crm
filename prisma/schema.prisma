@@ -163,3 +163,27 @@ model RepairAttachment {
   type       String   // Devis, Facture, Photo, Autre
   createdAt  DateTime @default(now())
 }
+
+model Project {
+  id          String   @id @default(uuid())
+  title       String
+  description String   @default("")
+  color       String   @default("#0071e3")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tasks       Task[]
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String    @default("")
+  status      String    @default("TODO") // TODO, IN_PROGRESS, DONE
+  priority    String    @default("NORMAL") // LOW, NORMAL, HIGH
+  dueDate     DateTime?
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}

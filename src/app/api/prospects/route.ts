@@ -41,6 +41,7 @@ export async function GET(request: Request) {
       where,
       include: {
         notes: { orderBy: { createdAt: "desc" }, take: 1 },
+        attachments: { orderBy: { createdAt: "desc" } },
         _count: { select: { notes: true } },
       },
       orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
         needsCallback: needsCallback || false,
         revenuePotential: revenuePotential || 0,
       },
-      include: { notes: true, _count: { select: { notes: true } } },
+      include: { notes: true, attachments: true, _count: { select: { notes: true } } },
     });
 
     return NextResponse.json(prospect, { status: 201 });

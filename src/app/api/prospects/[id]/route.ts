@@ -9,7 +9,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const prospect = await prisma.prospect.findUnique({
       where: { id },
-      include: { notes: { orderBy: { createdAt: "desc" } }, _count: { select: { notes: true } } },
+      include: { notes: { orderBy: { createdAt: "desc" } }, attachments: { orderBy: { createdAt: "desc" } }, _count: { select: { notes: true } } },
     });
     if (!prospect) return NextResponse.json({ error: "Non trouvé" }, { status: 404 });
     return NextResponse.json(prospect);
@@ -44,7 +44,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const prospect = await prisma.prospect.update({
       where: { id },
       data,
-      include: { notes: { orderBy: { createdAt: "desc" } }, _count: { select: { notes: true } } },
+      include: { notes: { orderBy: { createdAt: "desc" } }, attachments: { orderBy: { createdAt: "desc" } }, _count: { select: { notes: true } } },
     });
     return NextResponse.json(prospect);
   } catch (error) {

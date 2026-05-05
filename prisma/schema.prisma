@@ -214,6 +214,7 @@ model Prospect {
   revenuePotential   Float     @default(0)
   // Relations
   notes              ProspectNote[]
+  attachments        ProspectAttachment[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 }
@@ -224,5 +225,17 @@ model ProspectNote {
   prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
   content    String
   type       String   @default("NOTE") // NOTE, CALL, EMAIL, LINKEDIN, MEETING
+  createdAt  DateTime @default(now())
+}
+
+model ProspectAttachment {
+  id         String   @id @default(uuid())
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  fileName   String
+  storedName String   @unique
+  url        String
+  mimeType   String
+  size       Int
   createdAt  DateTime @default(now())
 }

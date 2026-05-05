@@ -28,6 +28,7 @@ interface Repair {
   priority: string;
   quoteValidated: boolean;
   createdAt: string;
+  appointmentDate?: string;
   technician?: {
     id: string;
     firstName: string;
@@ -360,7 +361,12 @@ export default function RepairsPage() {
                       )}
                     </div>
                     <span className="text-xs text-[#86868b]">
-                      {new Date(repair.createdAt).toLocaleDateString("fr-FR")}
+                      {repair.appointmentDate ? (
+                        <span className="flex flex-col">
+                          <span className="text-[10px] text-[#0071e3] font-medium">Intervention</span>
+                          {new Date(repair.appointmentDate).toLocaleDateString("fr-FR")}
+                        </span>
+                      ) : new Date(repair.createdAt).toLocaleDateString("fr-FR")}
                     </span>
                   </div>
                 </Link>
@@ -442,7 +448,12 @@ export default function RepairsPage() {
                         }
                       </td>
                       <td className="px-4 py-3 text-sm text-[#86868b]">
-                        {new Date(repair.createdAt).toLocaleDateString("fr-FR")}
+                        {repair.appointmentDate ? (
+                          <span className="flex flex-col">
+                            <span className="text-[10px] text-[#0071e3] font-medium">Intervention</span>
+                            {new Date(repair.appointmentDate).toLocaleDateString("fr-FR")}
+                          </span>
+                        ) : new Date(repair.createdAt).toLocaleDateString("fr-FR")}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">

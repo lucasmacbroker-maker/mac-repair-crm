@@ -187,3 +187,42 @@ model Task {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
+
+model Prospect {
+  id                 String    @id @default(uuid())
+  // Identité
+  firstName          String
+  lastName           String
+  email              String    @default("")
+  phone              String    @default("")
+  company            String    @default("")
+  position           String    @default("")
+  linkedinUrl        String    @default("")
+  source             String    @default("LinkedIn")
+  // Suivi
+  status             String    @default("NOT_CONTACTED")
+  priority           String    @default("MEDIUM")
+  temperature        String    @default("COLD")
+  // Dates
+  firstContactDate   DateTime?
+  lastInteraction    DateTime?
+  nextFollowUp       DateTime?
+  conversionDeadline DateTime?
+  // Relance
+  needsCallback      Boolean   @default(false)
+  // CA potentiel
+  revenuePotential   Float     @default(0)
+  // Relations
+  notes              ProspectNote[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model ProspectNote {
+  id         String   @id @default(uuid())
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  content    String
+  type       String   @default("NOTE") // NOTE, CALL, EMAIL, LINKEDIN, MEETING
+  createdAt  DateTime @default(now())
+}

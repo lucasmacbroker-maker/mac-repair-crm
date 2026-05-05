@@ -8,18 +8,16 @@ export async function GET(request: Request) {
     if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
+    const service = searchParams.get("service");
     const priority = searchParams.get("priority");
-    const temperature = searchParams.get("temperature");
     const search = searchParams.get("search");
     const needsCallback = searchParams.get("needsCallback");
     const followUpToday = searchParams.get("followUpToday");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
-    if (status) where.status = status;
+    if (service) where.service = service;
     if (priority) where.priority = priority;
-    if (temperature) where.temperature = temperature;
     if (needsCallback === "true") where.needsCallback = true;
     if (followUpToday === "true") {
       const today = new Date();
@@ -62,7 +60,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       firstName, lastName, email, phone, company, position,
-      linkedinUrl, source, status, priority, temperature,
+      linkedinUrl, source, service, priority,
       firstContactDate, lastInteraction, nextFollowUp, conversionDeadline,
       needsCallback, revenuePotential,
     } = body;
@@ -81,9 +79,8 @@ export async function POST(request: Request) {
         position: position || "",
         linkedinUrl: linkedinUrl || "",
         source: source || "LinkedIn",
-        status: status || "NOT_CONTACTED",
+        service: service || "REPAIR",
         priority: priority || "MEDIUM",
-        temperature: temperature || "COLD",
         firstContactDate: firstContactDate ? new Date(firstContactDate) : null,
         lastInteraction: lastInteraction ? new Date(lastInteraction) : null,
         nextFollowUp: nextFollowUp ? new Date(nextFollowUp) : null,

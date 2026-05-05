@@ -199,10 +199,10 @@ model Prospect {
   position           String    @default("")
   linkedinUrl        String    @default("")
   source             String    @default("LinkedIn")
+  // Service
+  service            String    @default("REPAIR") // REPAIR, BUYBACK, BOTH
   // Suivi
-  status             String    @default("NOT_CONTACTED")
   priority           String    @default("MEDIUM")
-  temperature        String    @default("COLD")
   // Dates
   firstContactDate   DateTime?
   lastInteraction    DateTime?

@@ -30,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const data: any = {};
     const fields = [
       "firstName","lastName","email","phone","company","position",
-      "linkedinUrl","source","status","priority","temperature",
+      "linkedinUrl","source","service","priority",
       "needsCallback","revenuePotential",
     ];
     for (const f of fields) {

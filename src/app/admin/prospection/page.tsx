@@ -99,6 +99,12 @@ function fmtDate(dateStr: string | null, short = false) {
   );
 }
 
+function normalizeUrl(url: string) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return "https://" + url;
+}
+
 function fmtDateTime(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("fr-FR", {
     day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
@@ -525,6 +531,14 @@ function ProspectCard({ prospect, onDetail, onEdit, onDelete, onStatusChange }: 
         <button onClick={() => onEdit(prospect)} className="flex-1 py-1 text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
           Modifier
         </button>
+        {prospect.linkedinUrl && (
+          <a href={normalizeUrl(prospect.linkedinUrl)} target="_blank" rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="px-2 py-1 text-xs text-[#0A66C2] hover:bg-[#0A66C2]/10 rounded-lg transition-colors font-medium"
+            title="Ouvrir LinkedIn">
+            in
+          </a>
+        )}
         <button onClick={() => onDelete(prospect.id)} className="px-2 py-1 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
           ✕
         </button>
@@ -648,6 +662,15 @@ function TableView({ prospects, onDetail, onEdit, onDelete, onStatusChange }: {
                   </td>
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {p.linkedinUrl && (
+                        <a href={normalizeUrl(p.linkedinUrl)} target="_blank" rel="noopener noreferrer"
+                          className="p-1.5 text-[#0A66C2] hover:bg-[#0A66C2]/10 rounded-lg transition-colors"
+                          title="Ouvrir profil LinkedIn">
+                          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                          </svg>
+                        </a>
+                      )}
                       <button onClick={() => onEdit(p)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
                         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -844,12 +867,12 @@ function DetailPanel({
           </div>
 
           {prospect.linkedinUrl && (
-            <a href={prospect.linkedinUrl} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-[#0071e3] hover:underline">
+            <a href={normalizeUrl(prospect.linkedinUrl)} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm font-medium text-white bg-[#0A66C2] hover:bg-[#004182] px-3 py-2 rounded-xl transition-colors w-fit">
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
               </svg>
-              Voir le profil LinkedIn
+              Ouvrir le profil LinkedIn
             </a>
           )}
 

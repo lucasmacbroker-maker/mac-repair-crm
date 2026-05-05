@@ -29,6 +29,7 @@ interface Repair {
   quoteValidated: boolean;
   createdAt: string;
   appointmentDate?: string;
+  serialNumber: string;
   technician?: {
     id: string;
     firstName: string;
@@ -390,12 +391,10 @@ export default function RepairsPage() {
                   <tr className="border-b border-gray-100">
                     <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">ID</th>
                     <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">Client</th>
-                    <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">Mac</th>
+                    <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">N° Série</th>
                     <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">Panne</th>
                     <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">Type</th>
                     <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">Statut</th>
-                    <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">Devis</th>
-                    <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">Technicien</th>
                     <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">Date</th>
                     <th className="text-left text-xs font-medium text-[#86868b] uppercase tracking-wider px-4 py-3">Actions</th>
                   </tr>
@@ -418,8 +417,8 @@ export default function RepairsPage() {
                         </p>
                         <p className="text-xs text-[#86868b]">{repair.clientEmail}</p>
                       </td>
-                      <td className="px-4 py-3 text-sm text-[#424245]">
-                        {repair.macModel}
+                      <td className="px-4 py-3 text-sm text-[#424245] font-mono">
+                        {repair.serialNumber || <span className="text-[#86868b]">—</span>}
                       </td>
                       <td className="px-4 py-3 text-sm text-[#424245]">
                         {repair.faultType}
@@ -432,26 +431,14 @@ export default function RepairsPage() {
                       <td className="px-4 py-3">
                         <StatusBadge status={repair.status} repairType={repair.repairType} />
                       </td>
-                      <td className="px-4 py-3">
-                        {repair.quoteValidated ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
-                            Valide
-                          </span>
-                        ) : (
-                          <span className="text-xs text-[#86868b]">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[#424245]">
-                        {repair.technician
-                          ? `${repair.technician.firstName} ${repair.technician.lastName}`
-                          : <span className="text-[#86868b]">Non assigne</span>
-                        }
-                      </td>
                       <td className="px-4 py-3 text-sm text-[#86868b]">
                         {repair.appointmentDate ? (
-                          <span className="flex flex-col">
+                          <span className="flex flex-col gap-0.5">
                             <span className="text-[10px] text-[#0071e3] font-medium">Intervention</span>
-                            {new Date(repair.appointmentDate).toLocaleDateString("fr-FR")}
+                            <span>{new Date(repair.appointmentDate).toLocaleDateString("fr-FR")}</span>
+                            <span className="text-xs text-[#424245] font-medium">
+                              {new Date(repair.appointmentDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
                           </span>
                         ) : new Date(repair.createdAt).toLocaleDateString("fr-FR")}
                       </td>

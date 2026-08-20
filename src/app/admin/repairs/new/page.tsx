@@ -56,6 +56,8 @@ export default function NewRepairPage() {
 
   // Bordereau Packlink (POSTAL only)
   const [bordereauFile, setBordereauFile] = useState<File | null>(null);
+  const [extractingTracking, setExtractingTracking] = useState(false);
+  const [trackingAutoFilled, setTrackingAutoFilled] = useState(false);
 
   // Notes
   const [internalNote, setInternalNote] = useState("");
@@ -145,6 +147,49 @@ export default function NewRepairPage() {
       toast.error("Erreur de connexion au serveur");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Extract Chronopost tracking number from Packlink PDF binary content
+  const extractTrackingFromPDF = (file: File): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const raw = e.target?.result as string;
+        if (!raw) return resolve(null);
+        // Chronopost patterns: CB/EE/EM/LT + 9 digits + FR, or 13 digits
+        const patterns = [
+          /\b([A-Z]{2}\d{9}[A-Z]{2})\b/g,
+          /\b([A-Z]{2}\d{8}[A-Z]{2})\b/g,
+          /\b(\d{13})\b/g,
+        ];
+        for (const pattern of patterns) {
+          const matches = [...raw.matchAll(pattern)];
+          // Filter out common false positives
+          const filtered = matches.map(m => m[1]).filter(m =>
+            !["ENDSTREAM", "ENDOBJ"].includes(m) && m.length >= 11
+          );
+          if (filtered.length > 0) return resolve(filtered[0]);
+        }
+        resolve(null);
+      };
+      reader.readAsText(file, "latin1"); // latin1 preserves raw bytes
+    });
+  };
+
+  const handleBordereauChange = async (file: File | null) => {
+    setBordereauFile(file);
+    setTrackingAutoFilled(false);
+    if (!file) return;
+    setExtractingTracking(true);
+    try {
+      const tracking = await extractTrackingFromPDF(file);
+      if (tracking) {
+        setInboundTracking(tracking);
+        setTrackingAutoFilled(true);
+      }
+    } finally {
+      setExtractingTracking(false);
     }
   };
 
@@ -362,12 +407,24 @@ export default function NewRepairPage() {
 
             {repairType === "POSTAL" && (
               <>
-                <Input
-                  label="N° suivi Chronopost"
-                  value={inboundTracking}
-                  onChange={(e) => setInboundTracking(e.target.value)}
-                  placeholder="Ex: CB123456789FR"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-[#1d1d1f] mb-1.5">
+                    N° suivi Chronopost
+                    {extractingTracking && (
+                      <span className="ml-2 text-xs text-[#0071e3] font-normal animate-pulse">Extraction en cours...</span>
+                    )}
+                    {trackingAutoFilled && !extractingTracking && (
+                      <span className="ml-2 text-xs text-green-600 font-normal">✓ Récupéré automatiquement</span>
+                    )}
+                  </label>
+                  <input
+                    type="text"
+                    value={inboundTracking}
+                    onChange={(e) => { setInboundTracking(e.target.value); setTrackingAutoFilled(false); }}
+                    placeholder="Ex: CB123456789FR"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:border-transparent"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-[#1d1d1f] mb-1.5">
                     Bordereau Packlink <span className="text-[#86868b] font-normal">(PDF)</span>
@@ -375,7 +432,7 @@ export default function NewRepairPage() {
                   <input
                     type="file"
                     accept="application/pdf"
-                    onChange={(e) => setBordereauFile(e.target.files?.[0] || null)}
+                    onChange={(e) => handleBordereauChange(e.target.files?.[0] || null)}
                     className="block w-full text-sm text-[#424245] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#f5f5f7] file:text-[#1d1d1f] hover:file:bg-[#e8e8ed] cursor-pointer border border-gray-200 rounded-lg p-1.5"
                   />
                   {bordereauFile && (

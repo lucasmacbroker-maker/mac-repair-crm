@@ -153,6 +153,10 @@ export default function RepairDetailPage() {
   // Appointment
   const [sendingConfirmation, setSendingConfirmation] = useState(false);
 
+  // Send documents (devis + bordereau)
+  const [sendingDocuments, setSendingDocuments] = useState(false);
+  const [bordereauFile, setBordereauFile] = useState<File | null>(null);
+
   // Attachments
   const [uploading, setUploading] = useState(false);
   const [attachmentType, setAttachmentType] = useState("Photo");
@@ -414,6 +418,31 @@ export default function RepairDetailPage() {
     }
   };
 
+  const handleSendDocuments = async () => {
+    if (!bordereauFile) {
+      toast.error("Veuillez sélectionner le bordereau Packlink (PDF)");
+      return;
+    }
+    setSendingDocuments(true);
+    try {
+      const fd = new FormData();
+      fd.append("bordereau", bordereauFile);
+      const res = await fetch(`/api/repairs/${repairId}/send-documents`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Devis + bordereau envoyés au client ✓");
+      setBordereauFile(null);
+      const input = document.getElementById("bordereau-input") as HTMLInputElement;
+      if (input) input.value = "";
+    } catch {
+      toast.error("Erreur lors de l'envoi");
+    } finally {
+      setSendingDocuments(false);
+    }
+  };
+
   if (loading) return <PageLoader />;
   if (!repair) return null;
 
@@ -668,6 +697,46 @@ export default function RepairDetailPage() {
           </div>
         </Card>
       </div>
+
+      {/* Send documents card — POSTAL repairs only */}
+      {repair.repairType === "POSTAL" && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>📨 Envoyer devis + bordereau au client</CardTitle>
+          </CardHeader>
+          <div className="px-6 pb-6">
+            <p className="text-sm text-[#86868b] mb-4">
+              Téléchargez le bordereau depuis Packlink, puis sélectionnez-le ici. Le client recevra un email avec le devis PDF et le bordereau d&apos;envoi en pièce jointe.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-[#86868b] mb-1.5">Bordereau Packlink (PDF)</label>
+                <input
+                  id="bordereau-input"
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setBordereauFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-[#424245] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#f5f5f7] file:text-[#1d1d1f] hover:file:bg-[#e8e8ed] cursor-pointer border border-gray-200 rounded-lg p-1.5"
+                />
+              </div>
+              <Button
+                onClick={handleSendDocuments}
+                loading={sendingDocuments}
+                disabled={!bordereauFile || sendingDocuments}
+                className="whitespace-nowrap"
+              >
+                <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Envoyer au client
+              </Button>
+            </div>
+            {bordereauFile && (
+              <p className="text-xs text-green-600 mt-2">✓ {bordereauFile.name} sélectionné</p>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Appointment card — LOCAL repairs only */}
       {repair.repairType === "LOCAL" && (

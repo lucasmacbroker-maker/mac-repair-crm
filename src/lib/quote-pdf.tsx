@@ -74,9 +74,9 @@ const styles = StyleSheet.create({
 });
 
 function QuoteDoc({ data }: { data: QuoteData }) {
-  const ht = data.estimatedCost;
-  const tva = Math.round(ht * 0.2 * 100) / 100;
-  const ttc = Math.round((ht + tva) * 100) / 100;
+  const ttc = data.estimatedCost; // prix saisi = TTC
+  const ht  = Math.round((ttc / 1.2) * 100) / 100;
+  const tva = Math.round((ttc - ht) * 100) / 100;
   const date = data.createdAt ? new Date(data.createdAt) : new Date();
   const num = data.id.slice(0, 8).toUpperCase();
 

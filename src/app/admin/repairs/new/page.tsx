@@ -47,9 +47,8 @@ export default function NewRepairPage() {
   const [repairType, setRepairType] = useState<"POSTAL" | "LOCAL" | "HOME">("LOCAL");
   const [priority, setPriority] = useState("NORMAL");
   const [inboundTracking, setInboundTracking] = useState("");
-  const [carrier, setCarrier] = useState("");
   const [estimatedCost, setEstimatedCost] = useState("");
-  const [estimatedReturn, setEstimatedReturn] = useState("");
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
   const [technicianId, setTechnicianId] = useState("");
 
   // Appointment (LOCAL only)
@@ -109,12 +108,10 @@ export default function NewRepairPage() {
       fd.append("repairType", repairType);
       fd.append("priority", priority);
       fd.append("estimatedCost", estimatedCost ? estimatedCost : "0");
-      fd.append("estimatedReturn", estimatedReturn || "");
       fd.append("appointmentDate", appointmentDate ? new Date(appointmentDate).toISOString() : "");
       fd.append("technicianId", technicianId || "");
       if (repairType === "POSTAL") {
         fd.append("inboundTracking", inboundTracking.trim());
-        fd.append("carrier", carrier);
         if (bordereauFile) fd.append("bordereau", bordereauFile);
       }
 
@@ -148,6 +145,22 @@ export default function NewRepairPage() {
       toast.error("Erreur de connexion au serveur");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePostalCodeChange = async (value: string) => {
+    setPostalCode(value);
+    setCitySuggestions([]);
+    if (value.length === 5) {
+      try {
+        const res = await fetch(`https://geo.api.gouv.fr/communes?codePostal=${value}&fields=nom&format=json`);
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const names = data.map((c: { nom: string }) => c.nom);
+          setCitySuggestions(names);
+          if (!city) setCity(names[0]);
+        }
+      } catch { /* ignore */ }
     }
   };
 
@@ -223,15 +236,34 @@ export default function NewRepairPage() {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
             />
+            <div>
+              <Input
+                label="Code postal"
+                value={postalCode}
+                onChange={(e) => handlePostalCodeChange(e.target.value)}
+                placeholder="Ex: 75001"
+                maxLength={5}
+              />
+              {citySuggestions.length > 1 && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {citySuggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setCity(s)}
+                      className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${city === s ? "bg-[#0071e3] text-white border-[#0071e3]" : "bg-white text-[#424245] border-gray-200 hover:border-[#0071e3]"}`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <Input
               label="Ville"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-            />
-            <Input
-              label="Code postal"
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
+              placeholder={citySuggestions.length > 0 ? "Rempli automatiquement" : ""}
             />
           </div>
         </Card>
@@ -330,12 +362,11 @@ export default function NewRepairPage() {
 
             {repairType === "POSTAL" && (
               <>
-                <Select
-                  label="Transporteur"
-                  options={carrierOptions}
-                  value={carrier}
-                  onChange={(e) => setCarrier(e.target.value)}
-                  placeholder="Selectionnez un transporteur"
+                <Input
+                  label="N° suivi Chronopost"
+                  value={inboundTracking}
+                  onChange={(e) => setInboundTracking(e.target.value)}
+                  placeholder="Ex: CB123456789FR"
                 />
                 <div>
                   <label className="block text-sm font-medium text-[#1d1d1f] mb-1.5">
@@ -364,12 +395,6 @@ export default function NewRepairPage() {
               value={estimatedCost}
               onChange={(e) => setEstimatedCost(e.target.value)}
               placeholder="0.00"
-            />
-            <Input
-              label="Date de retour estimee"
-              type="date"
-              value={estimatedReturn}
-              onChange={(e) => setEstimatedReturn(e.target.value)}
             />
             {(repairType === "LOCAL" || repairType === "HOME") && (
               <Input

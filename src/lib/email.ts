@@ -406,55 +406,36 @@ export async function sendPostalRepairEmail(
     await transporter.sendMail({
       from: FROM,
       to: email,
-      subject: `${COMPANY} — Votre devis et bordereau d'envoi`,
+      subject: `${COMPANY} — Confirmation de votre demande de réparation`,
       attachments,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1d1d1f;">
 
           <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 8px;">Bonjour ${clientName},</h1>
           <p style="color: #424245; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
-            Veuillez trouver ci-joint le <strong>devis</strong> pour la réparation de votre <strong>${macModel}</strong>.
+            Votre demande de réparation pour votre <strong>${macModel}</strong> a bien été enregistrée.<br/>
+            Veuillez trouver ci-joint le <strong>devis</strong> correspondant.
           </p>
 
           <!-- Instructions emballage -->
           <div style="background: #f5f5f7; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
             <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #000;">📦 Procédure d'envoi</h2>
-
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-              <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-                <div style="background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; flex-shrink: 0; text-align: center; line-height: 24px;">1</div>
-                <p style="margin: 0; font-size: 14px; color: #333; line-height: 1.5; padding-top: 3px;">
-                  <strong>Créez votre bordereau d'envoi</strong> sur Packlink PRO en cliquant sur le bouton ci-dessous.
-                </p>
-              </div>
-              <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-                <div style="background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; font-weight: bold; font-size: 13px; flex-shrink: 0; text-align: center; line-height: 24px;">2</div>
-                <p style="margin: 0; font-size: 14px; color: #333; line-height: 1.5; padding-top: 3px;">
-                  <strong>Imprimez le bordereau d'envoi</strong> que vous aurez généré, ainsi que le devis joint à ce mail.
-                </p>
-              </div>
-              <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-                <div style="background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; font-weight: bold; font-size: 13px; flex-shrink: 0; text-align: center; line-height: 24px;">3</div>
-                <p style="margin: 0; font-size: 14px; color: #333; line-height: 1.5; padding-top: 3px;">
-                  <strong>Emballez soigneusement votre Mac</strong> dans un colis adapté avec du papier bulle ou mousse de protection.
-                </p>
-              </div>
-              <div style="display: flex; align-items: flex-start; gap: 12px;">
-                <div style="background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; font-weight: bold; font-size: 13px; flex-shrink: 0; text-align: center; line-height: 24px;">4</div>
-                <p style="margin: 0; font-size: 14px; color: #333; line-height: 1.5; padding-top: 3px;">
-                  <strong>Collez le bordereau</strong> sur le colis et <strong>déposez-le au bureau de poste</strong> le plus proche.
-                </p>
-              </div>
+            <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
+              <span style="background:#000;color:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;flex-shrink:0;margin-right:12px;margin-top:1px;">1</span>
+              <p style="margin:0;font-size:14px;color:#333;line-height:1.5;">Vous recevrez prochainement un <strong>bordereau d'envoi prépayé</strong> par email de notre part. Imprimez-le.</p>
             </div>
-          </div>
-
-          <!-- Bouton Packlink -->
-          <div style="text-align: center; margin-bottom: 28px;">
-            <a href="${packlinkUrl}" style="background-color: #e8611a; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 600; display: inline-block;">
-              📦 Créer mon bordereau sur Packlink
-            </a>
-            <p style="font-size: 12px; color: #86868b; margin-top: 8px;">Vous aurez besoin de notre adresse de livraison :<br/>
-            <strong>Mac Place — 5, rue Paul Vaillant Couturier, 94700 Maisons Alfort</strong></p>
+            <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
+              <span style="background:#000;color:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;flex-shrink:0;margin-right:12px;margin-top:1px;">2</span>
+              <p style="margin:0;font-size:14px;color:#333;line-height:1.5;"><strong>Emballez soigneusement votre Mac</strong> dans un colis adapté avec du papier bulle ou de la mousse de protection.</p>
+            </div>
+            <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
+              <span style="background:#000;color:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;flex-shrink:0;margin-right:12px;margin-top:1px;">3</span>
+              <p style="margin:0;font-size:14px;color:#333;line-height:1.5;"><strong>Collez le bordereau</strong> imprimé sur le colis.</p>
+            </div>
+            <div style="display: flex; align-items: flex-start;">
+              <span style="background:#000;color:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;flex-shrink:0;margin-right:12px;margin-top:1px;">4</span>
+              <p style="margin:0;font-size:14px;color:#333;line-height:1.5;"><strong>Déposez le colis</strong> au bureau de poste ou point relais le plus proche.</p>
+            </div>
           </div>
 
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />

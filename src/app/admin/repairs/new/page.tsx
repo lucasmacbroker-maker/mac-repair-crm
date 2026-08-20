@@ -150,45 +150,24 @@ export default function NewRepairPage() {
     }
   };
 
-  // Extract Chronopost tracking number from Packlink PDF binary content
-  const extractTrackingFromPDF = (file: File): Promise<string | null> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const raw = e.target?.result as string;
-        if (!raw) return resolve(null);
-        // Chronopost patterns: CB/EE/EM/LT + 9 digits + FR, or 13 digits
-        const patterns = [
-          /\b([A-Z]{2}\d{9}[A-Z]{2})\b/g,
-          /\b([A-Z]{2}\d{8}[A-Z]{2})\b/g,
-          /\b(\d{13})\b/g,
-        ];
-        for (const pattern of patterns) {
-          const matches = [...raw.matchAll(pattern)];
-          // Filter out common false positives
-          const filtered = matches.map(m => m[1]).filter(m =>
-            !["ENDSTREAM", "ENDOBJ"].includes(m) && m.length >= 11
-          );
-          if (filtered.length > 0) return resolve(filtered[0]);
-        }
-        resolve(null);
-      };
-      reader.readAsText(file, "latin1"); // latin1 preserves raw bytes
-    });
-  };
-
   const handleBordereauChange = async (file: File | null) => {
     setBordereauFile(file);
     setTrackingAutoFilled(false);
     if (!file) return;
     setExtractingTracking(true);
     try {
-      const tracking = await extractTrackingFromPDF(file);
-      if (tracking) {
-        setInboundTracking(tracking);
-        setTrackingAutoFilled(true);
+      const fd = new FormData();
+      fd.append("pdf", file);
+      const res = await fetch("/api/extract-tracking", { method: "POST", body: fd });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.tracking) {
+          setInboundTracking(data.tracking);
+          setTrackingAutoFilled(true);
+        }
       }
-    } finally {
+    } catch { /* ignore, user can type manually */ }
+    finally {
       setExtractingTracking(false);
     }
   };

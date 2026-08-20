@@ -1,5 +1,5 @@
 "use client";
-
+// v2 - statuts postaux mis à jour
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getStatuses } from "@/lib/constants";

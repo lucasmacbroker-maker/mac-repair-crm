@@ -108,29 +108,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const body = await request.json();
+    // Parse FormData (supports file uploads)
+    const formData = await request.formData();
+    const g = (k: string) => (formData.get(k) as string | null) || "";
 
-    const {
-      clientFirstName,
-      clientLastName,
-      clientEmail,
-      clientPhone,
-      clientAddress,
-      clientCity,
-      clientPostalCode,
-      macModel,
-      serialNumber,
-      faultType,
-      faultDescription,
-      repairType,
-      priority,
-      inboundTracking,
-      carrier,
-      estimatedCost,
-      estimatedReturn,
-      technicianId,
-      appointmentDate,
-    } = body;
+    const clientFirstName = g("clientFirstName");
+    const clientLastName  = g("clientLastName");
+    const clientEmail     = g("clientEmail");
+    const clientPhone     = g("clientPhone");
+    const clientAddress   = g("clientAddress");
+    const clientCity      = g("clientCity");
+    const clientPostalCode = g("clientPostalCode");
+    const macModel        = g("macModel");
+    const serialNumber    = g("serialNumber");
+    const faultType       = g("faultType");
+    const faultDescription = g("faultDescription");
+    const repairType      = g("repairType");
+    const priority        = g("priority");
+    const inboundTracking = g("inboundTracking");
+    const carrier         = g("carrier");
+    const estimatedCost   = parseFloat(g("estimatedCost") || "0") || 0;
+    const estimatedReturn = g("estimatedReturn") || null;
+    const appointmentDate = g("appointmentDate") || null;
+    const technicianId    = g("technicianId") || null;
+    const bordereauFile   = formData.get("bordereau") as File | null;
 
     if (!clientFirstName || !clientLastName || !clientEmail || !clientPhone) {
       return NextResponse.json(
@@ -198,11 +199,15 @@ export async function POST(request: Request) {
       },
     });
 
+    // Read bordereau buffer before after() (File object not available inside after)
+    const bordereauBuffer = bordereauFile
+      ? Buffer.from(await bordereauFile.arrayBuffer())
+      : null;
+
     after(async () => {
       const clientName = `${clientFirstName} ${clientLastName}`;
 
       if (repairType === "POSTAL") {
-        // For postal repairs: generate quote PDF + send complete email
         try {
           const quotePdf = await generateQuotePDF({
             id: repair.id,
@@ -221,22 +226,22 @@ export async function POST(request: Request) {
             createdAt: repair.createdAt,
             token,
           });
-          await sendPostalRepairEmail(
-            clientEmail,
-            clientName,
-            token,
-            macModel,
-            repair.id,
-            quotePdf,
-          );
+
+          if (bordereauBuffer) {
+            // Bordereau uploaded → send combined email (devis + bordereau)
+            await sendPostalRepairEmail(
+              clientEmail,
+              clientName,
+              token,
+              macModel,
+              repair.id,
+              quotePdf,
+              bordereauBuffer,
+            );
+          }
+          // No bordereau → no email sent yet (admin will send later via fiche ticket)
         } catch (err) {
           console.error("Failed to send postal repair email:", err);
-          // Fallback to basic tracking email
-          try {
-            await sendTrackingEmail(clientEmail, clientName, token, macModel);
-          } catch (e) {
-            console.error("Fallback tracking email also failed:", e);
-          }
         }
       } else {
         // For LOCAL/HOME repairs: send tracking email

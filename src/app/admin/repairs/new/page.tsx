@@ -55,6 +55,9 @@ export default function NewRepairPage() {
   // Appointment (LOCAL only)
   const [appointmentDate, setAppointmentDate] = useState("");
 
+  // Bordereau Packlink (POSTAL only)
+  const [bordereauFile, setBordereauFile] = useState<File | null>(null);
+
   // Notes
   const [internalNote, setInternalNote] = useState("");
 
@@ -91,35 +94,33 @@ export default function NewRepairPage() {
 
     setLoading(true);
     try {
-      const body: Record<string, unknown> = {
-        clientFirstName: firstName.trim(),
-        clientLastName: lastName.trim(),
-        clientEmail: email.trim(),
-        clientPhone: phone.trim(),
-        clientAddress: address.trim(),
-        clientCity: city.trim(),
-        clientPostalCode: postalCode.trim(),
-        macModel,
-        serialNumber: serialNumber.trim(),
-        faultType,
-        faultDescription: faultDescription.trim(),
-        repairType,
-        priority,
-        estimatedCost: estimatedCost ? parseFloat(estimatedCost) : 0,
-        estimatedReturn: estimatedReturn || null,
-        appointmentDate: appointmentDate ? new Date(appointmentDate).toISOString() : null,
-        technicianId: technicianId || null,
-      };
-
+      const fd = new FormData();
+      fd.append("clientFirstName", firstName.trim());
+      fd.append("clientLastName", lastName.trim());
+      fd.append("clientEmail", email.trim());
+      fd.append("clientPhone", phone.trim());
+      fd.append("clientAddress", address.trim());
+      fd.append("clientCity", city.trim());
+      fd.append("clientPostalCode", postalCode.trim());
+      fd.append("macModel", macModel);
+      fd.append("serialNumber", serialNumber.trim());
+      fd.append("faultType", faultType);
+      fd.append("faultDescription", faultDescription.trim());
+      fd.append("repairType", repairType);
+      fd.append("priority", priority);
+      fd.append("estimatedCost", estimatedCost ? estimatedCost : "0");
+      fd.append("estimatedReturn", estimatedReturn || "");
+      fd.append("appointmentDate", appointmentDate ? new Date(appointmentDate).toISOString() : "");
+      fd.append("technicianId", technicianId || "");
       if (repairType === "POSTAL") {
-        body.inboundTracking = inboundTracking.trim();
-        body.carrier = carrier;
+        fd.append("inboundTracking", inboundTracking.trim());
+        fd.append("carrier", carrier);
+        if (bordereauFile) fd.append("bordereau", bordereauFile);
       }
 
       const res = await fetch("/api/repairs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: fd,
       });
 
       const data = await res.json();
@@ -329,12 +330,6 @@ export default function NewRepairPage() {
 
             {repairType === "POSTAL" && (
               <>
-                <Input
-                  label="N de suivi entrant"
-                  value={inboundTracking}
-                  onChange={(e) => setInboundTracking(e.target.value)}
-                  placeholder="Numero de suivi du colis"
-                />
                 <Select
                   label="Transporteur"
                   options={carrierOptions}
@@ -342,6 +337,23 @@ export default function NewRepairPage() {
                   onChange={(e) => setCarrier(e.target.value)}
                   placeholder="Selectionnez un transporteur"
                 />
+                <div>
+                  <label className="block text-sm font-medium text-[#1d1d1f] mb-1.5">
+                    Bordereau Packlink <span className="text-[#86868b] font-normal">(PDF)</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={(e) => setBordereauFile(e.target.files?.[0] || null)}
+                    className="block w-full text-sm text-[#424245] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#f5f5f7] file:text-[#1d1d1f] hover:file:bg-[#e8e8ed] cursor-pointer border border-gray-200 rounded-lg p-1.5"
+                  />
+                  {bordereauFile && (
+                    <p className="text-xs text-green-600 mt-1.5">✓ {bordereauFile.name}</p>
+                  )}
+                  {!bordereauFile && (
+                    <p className="text-xs text-[#86868b] mt-1.5">Le devis PDF sera généré automatiquement. Si vous joignez le bordereau, les deux seront envoyés dans un seul email au client.</p>
+                  )}
+                </div>
               </>
             )}
 

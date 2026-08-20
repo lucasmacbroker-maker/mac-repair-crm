@@ -390,50 +390,69 @@ export async function sendPostalRepairEmail(
   macModel: string,
   repairId: string,
   quotePdfBuffer: Buffer,
+  bordereauBuffer?: Buffer,
 ) {
   const trackingUrl = `${APP_URL}/suivi/${token}`;
   const packlinkUrl = `https://pro.packlink.fr/private/shipments/new`;
+  void packlinkUrl; // kept for reference
 
+  const quoteNum = repairId.slice(0, 8).toUpperCase();
   const attachments: Attachment[] = [
     {
-      filename: `Devis-MacPlace-${repairId.slice(0, 8).toUpperCase()}.pdf`,
+      filename: `Devis-MacPlace-${quoteNum}.pdf`,
       content: quotePdfBuffer,
       contentType: "application/pdf",
     },
   ];
+  if (bordereauBuffer) {
+    attachments.push({
+      filename: `Bordereau-envoi-${quoteNum}.pdf`,
+      content: bordereauBuffer,
+      contentType: "application/pdf",
+    });
+  }
 
   try {
     await transporter.sendMail({
       from: FROM,
       to: email,
-      subject: `${COMPANY} — Confirmation de votre demande de réparation`,
+      subject: bordereauBuffer
+        ? `${COMPANY} — Votre devis et bordereau d'envoi`
+        : `${COMPANY} — Confirmation de votre demande de réparation`,
       attachments,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1d1d1f;">
 
           <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 8px;">Bonjour ${clientName},</h1>
           <p style="color: #424245; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
-            Votre demande de réparation pour votre <strong>${macModel}</strong> a bien été enregistrée.<br/>
-            Veuillez trouver ci-joint le <strong>devis</strong> correspondant.
+            ${bordereauBuffer
+              ? `Veuillez trouver ci-joint le <strong>devis</strong> ainsi que le <strong>bordereau d'envoi prépayé</strong> pour la réparation de votre <strong>${macModel}</strong>.`
+              : `Votre demande de réparation pour votre <strong>${macModel}</strong> a bien été enregistrée. Veuillez trouver ci-joint votre <strong>devis</strong>.`
+            }
           </p>
 
           <!-- Instructions emballage -->
           <div style="background: #f5f5f7; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
             <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #000;">📦 Procédure d'envoi</h2>
             <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
-              <span style="background:#000;color:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;flex-shrink:0;margin-right:12px;margin-top:1px;">1</span>
-              <p style="margin:0;font-size:14px;color:#333;line-height:1.5;">Vous recevrez prochainement un <strong>bordereau d'envoi prépayé</strong> par email de notre part. Imprimez-le.</p>
+              <span style="background:#000;color:#fff;border-radius:50%;min-width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;margin-right:12px;margin-top:1px;">1</span>
+              <p style="margin:0;font-size:14px;color:#333;line-height:1.5;">
+                ${bordereauBuffer
+                  ? `<strong>Imprimez le bordereau d'envoi</strong> joint à ce mail.`
+                  : `Vous recevrez prochainement un <strong>bordereau d'envoi prépayé</strong> par email. Imprimez-le dès réception.`
+                }
+              </p>
             </div>
             <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
-              <span style="background:#000;color:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;flex-shrink:0;margin-right:12px;margin-top:1px;">2</span>
+              <span style="background:#000;color:#fff;border-radius:50%;min-width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;margin-right:12px;margin-top:1px;">2</span>
               <p style="margin:0;font-size:14px;color:#333;line-height:1.5;"><strong>Emballez soigneusement votre Mac</strong> dans un colis adapté avec du papier bulle ou de la mousse de protection.</p>
             </div>
             <div style="margin-bottom: 12px; display: flex; align-items: flex-start;">
-              <span style="background:#000;color:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;flex-shrink:0;margin-right:12px;margin-top:1px;">3</span>
+              <span style="background:#000;color:#fff;border-radius:50%;min-width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;margin-right:12px;margin-top:1px;">3</span>
               <p style="margin:0;font-size:14px;color:#333;line-height:1.5;"><strong>Collez le bordereau</strong> imprimé sur le colis.</p>
             </div>
             <div style="display: flex; align-items: flex-start;">
-              <span style="background:#000;color:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;flex-shrink:0;margin-right:12px;margin-top:1px;">4</span>
+              <span style="background:#000;color:#fff;border-radius:50%;min-width:22px;height:22px;font-size:12px;font-weight:bold;text-align:center;line-height:22px;margin-right:12px;margin-top:1px;">4</span>
               <p style="margin:0;font-size:14px;color:#333;line-height:1.5;"><strong>Déposez le colis</strong> au bureau de poste ou point relais le plus proche.</p>
             </div>
           </div>

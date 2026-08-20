@@ -13,11 +13,11 @@ export const STATUSES_HOME = [
 ] as const;
 
 export const STATUSES_POSTAL = [
-  { key: "PENDING",   label: "En attente de réception",          icon: "📦" },
-  { key: "RECEIVED",  label: "Mac reçu — diagnostic en cours",   icon: "🔍" },
-  { key: "REPAIRING", label: "Réparation en cours",              icon: "🔧" },
-  { key: "DONE",      label: "Réparation terminée — expédition", icon: "✅" },
-  { key: "CLOSED",    label: "Mac expédié — dossier clôturé",    icon: "🏁" },
+  { key: "PENDING",   label: "Mac en cours d'envoi",              icon: "📦" },
+  { key: "RECEIVED",  label: "Mac reçu en atelier",               icon: "🏪" },
+  { key: "REPAIRING", label: "Réparation en cours",               icon: "🔧" },
+  { key: "DONE",      label: "Mac réparé, en attente de paiement", icon: "✅" },
+  { key: "CLOSED",    label: "Mac réexpédié",                     icon: "🚀" },
 ] as const;
 
 // Keep for backward compat

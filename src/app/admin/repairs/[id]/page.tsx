@@ -595,6 +595,21 @@ export default function RepairDetailPage() {
                 </a>
               </div>
             )}
+            {repair.repairType === "POSTAL" && (
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs text-[#86868b] mb-2">Adresse de livraison Mac Place :</p>
+                <p className="text-xs text-[#424245] font-mono mb-3">5, rue Paul Vaillant Couturier<br/>94700 Maisons Alfort</p>
+                <a
+                  href={`https://pro.packlink.fr/private/shipments/new`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                  style={{ backgroundColor: "#e8611a" }}
+                >
+                  📦 Créer bordereau Packlink
+                </a>
+              </div>
+            )}
             {repair.paymentLink && (
               <div className="flex justify-between">
                 <span className="text-[#86868b]">Lien de paiement</span>

@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { after } from "next/server";
-import { sendTrackingEmail, sendNewRepairNotification, sendAppointmentConfirmationEmail } from "@/lib/email";
+import { sendTrackingEmail, sendNewRepairNotification, sendAppointmentConfirmationEmail, sendPostalRepairEmail } from "@/lib/email";
+import { generateQuotePDF } from "@/lib/quote-pdf";
 
 export async function GET(request: Request) {
   try {
@@ -198,42 +199,75 @@ export async function POST(request: Request) {
     });
 
     after(async () => {
-      try {
-        await sendTrackingEmail(
-          clientEmail,
-          `${clientFirstName} ${clientLastName}`,
-          token,
-          macModel
-        );
-      } catch (err) {
-        console.error("Failed to send tracking email:", err);
-      }
-      try {
-        await sendNewRepairNotification(
-          `${clientFirstName} ${clientLastName}`,
-          macModel,
-          faultType,
-          repairType,
-          repair.id
-        );
-      } catch (err) {
-        console.error("Failed to send admin notification:", err);
-      }
-      if (appointmentDate && (repairType === "LOCAL" || repairType === "HOME")) {
-        const fullClientAddress = [clientAddress, clientPostalCode, clientCity].filter(Boolean).join(", ");
+      const clientName = `${clientFirstName} ${clientLastName}`;
+
+      if (repairType === "POSTAL") {
+        // For postal repairs: generate quote PDF + send complete email
         try {
-          await sendAppointmentConfirmationEmail(
+          const quotePdf = await generateQuotePDF({
+            id: repair.id,
+            clientFirstName,
+            clientLastName,
             clientEmail,
-            `${clientFirstName} ${clientLastName}`,
+            clientPhone,
+            clientAddress,
+            clientCity,
+            clientPostalCode,
+            macModel,
+            serialNumber,
+            faultType,
+            faultDescription,
+            estimatedCost: estimatedCost || 0,
+            createdAt: repair.createdAt,
+            token,
+          });
+          await sendPostalRepairEmail(
+            clientEmail,
+            clientName,
             token,
             macModel,
-            new Date(appointmentDate),
-            repairType === "HOME",
-            fullClientAddress,
+            repair.id,
+            quotePdf,
           );
         } catch (err) {
-          console.error("Failed to send appointment confirmation:", err);
+          console.error("Failed to send postal repair email:", err);
+          // Fallback to basic tracking email
+          try {
+            await sendTrackingEmail(clientEmail, clientName, token, macModel);
+          } catch (e) {
+            console.error("Fallback tracking email also failed:", e);
+          }
         }
+      } else {
+        // For LOCAL/HOME repairs: send tracking email
+        try {
+          await sendTrackingEmail(clientEmail, clientName, token, macModel);
+        } catch (err) {
+          console.error("Failed to send tracking email:", err);
+        }
+        if (appointmentDate && (repairType === "LOCAL" || repairType === "HOME")) {
+          const fullClientAddress = [clientAddress, clientPostalCode, clientCity].filter(Boolean).join(", ");
+          try {
+            await sendAppointmentConfirmationEmail(
+              clientEmail,
+              clientName,
+              token,
+              macModel,
+              new Date(appointmentDate),
+              repairType === "HOME",
+              fullClientAddress,
+            );
+          } catch (err) {
+            console.error("Failed to send appointment confirmation:", err);
+          }
+        }
+      }
+
+      // Admin notification for all types
+      try {
+        await sendNewRepairNotification(clientName, macModel, faultType, repairType, repair.id);
+      } catch (err) {
+        console.error("Failed to send admin notification:", err);
       }
     });
 

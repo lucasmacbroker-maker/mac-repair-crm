@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import type { Attachment } from "nodemailer/lib/mailer";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -378,6 +379,120 @@ export async function sendQuoteValidatedEmail(
     return true;
   } catch (error) {
     console.error("Failed to send quote validated email:", error);
+    return false;
+  }
+}
+
+export async function sendPostalRepairEmail(
+  email: string,
+  clientName: string,
+  token: string,
+  macModel: string,
+  repairId: string,
+  quotePdfBuffer: Buffer,
+) {
+  const trackingUrl = `${APP_URL}/suivi/${token}`;
+  const packlinkUrl = `https://pro.packlink.fr/private/shipments/new`;
+
+  const attachments: Attachment[] = [
+    {
+      filename: `Devis-MacPlace-${repairId.slice(0, 8).toUpperCase()}.pdf`,
+      content: quotePdfBuffer,
+      contentType: "application/pdf",
+    },
+  ];
+
+  try {
+    await transporter.sendMail({
+      from: FROM,
+      to: email,
+      subject: `${COMPANY} — Votre devis et bordereau d'envoi`,
+      attachments,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1d1d1f;">
+
+          <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 8px;">Bonjour ${clientName},</h1>
+          <p style="color: #424245; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
+            Veuillez trouver ci-joint le <strong>devis</strong> pour la réparation de votre <strong>${macModel}</strong>.
+          </p>
+
+          <!-- Instructions emballage -->
+          <div style="background: #f5f5f7; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+            <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0; color: #000;">📦 Procédure d'envoi</h2>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                <div style="background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; flex-shrink: 0; text-align: center; line-height: 24px;">1</div>
+                <p style="margin: 0; font-size: 14px; color: #333; line-height: 1.5; padding-top: 3px;">
+                  <strong>Créez votre bordereau d'envoi</strong> sur Packlink PRO en cliquant sur le bouton ci-dessous.
+                </p>
+              </div>
+              <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                <div style="background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; font-weight: bold; font-size: 13px; flex-shrink: 0; text-align: center; line-height: 24px;">2</div>
+                <p style="margin: 0; font-size: 14px; color: #333; line-height: 1.5; padding-top: 3px;">
+                  <strong>Imprimez le bordereau d'envoi</strong> que vous aurez généré, ainsi que le devis joint à ce mail.
+                </p>
+              </div>
+              <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                <div style="background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; font-weight: bold; font-size: 13px; flex-shrink: 0; text-align: center; line-height: 24px;">3</div>
+                <p style="margin: 0; font-size: 14px; color: #333; line-height: 1.5; padding-top: 3px;">
+                  <strong>Emballez soigneusement votre Mac</strong> dans un colis adapté avec du papier bulle ou mousse de protection.
+                </p>
+              </div>
+              <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <div style="background: #000; color: #fff; border-radius: 50%; width: 24px; height: 24px; font-weight: bold; font-size: 13px; flex-shrink: 0; text-align: center; line-height: 24px;">4</div>
+                <p style="margin: 0; font-size: 14px; color: #333; line-height: 1.5; padding-top: 3px;">
+                  <strong>Collez le bordereau</strong> sur le colis et <strong>déposez-le au bureau de poste</strong> le plus proche.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bouton Packlink -->
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${packlinkUrl}" style="background-color: #e8611a; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 600; display: inline-block;">
+              📦 Créer mon bordereau sur Packlink
+            </a>
+            <p style="font-size: 12px; color: #86868b; margin-top: 8px;">Vous aurez besoin de notre adresse de livraison :<br/>
+            <strong>Mac Place — 5, rue Paul Vaillant Couturier, 94700 Maisons Alfort</strong></p>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
+
+          <!-- Suivi temps réel -->
+          <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">🔍 Suivi en temps réel</h2>
+          <p style="color: #424245; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+            Dès réception de votre appareil, nous procéderons à la réparation dans les plus brefs délais.<br/>
+            Vous serez informé à chaque étape via votre espace de suivi personnel :
+          </p>
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${trackingUrl}" style="background-color: #0071e3; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 600; display: inline-block;">
+              Suivre ma réparation en temps réel
+            </a>
+            <p style="font-size: 11px; color: #86868b; margin-top: 8px;">${trackingUrl}</p>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
+
+          <p style="color: #424245; font-size: 14px; line-height: 1.6;">
+            N'hésitez pas à nous contacter si vous avez la moindre question.
+          </p>
+          <p style="color: #424245; font-size: 14px; line-height: 1.6; margin-top: 4px;">
+            Bien cordialement,<br/>
+            <strong>${COMPANY}</strong>
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
+          <p style="color: #86868b; font-size: 12px;">
+            ${COMPANY} — 5, rue Paul Vaillant Couturier, 94700 Maisons Alfort<br/>
+            07 82 71 21 23 — contact@macplace.fr
+          </p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send postal repair email:", error);
     return false;
   }
 }

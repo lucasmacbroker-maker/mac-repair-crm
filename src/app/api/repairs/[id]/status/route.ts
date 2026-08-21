@@ -6,6 +6,7 @@ import { after } from "next/server";
 import { sendStatusUpdateEmail, sendInvoiceEmail } from "@/lib/email";
 import { createPaymentSession } from "@/lib/stripe";
 import { generateInvoicePDF } from "@/lib/invoice-pdf";
+// stripe.ts uses native fetch — no npm dependency needed
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 

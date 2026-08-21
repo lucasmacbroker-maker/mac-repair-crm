@@ -161,6 +161,9 @@ export default function RepairDetailPage() {
   const [sendingReturn, setSendingReturn] = useState(false);
   const [returnBordereauFile, setReturnBordereauFile] = useState<File | null>(null);
   const [returnTrackingUrl, setReturnTrackingUrl] = useState("");
+  const [returnTrackingNumber, setReturnTrackingNumber] = useState("");
+  const [returnExtractingTracking, setReturnExtractingTracking] = useState(false);
+  const [returnTrackingAutoFilled, setReturnTrackingAutoFilled] = useState(false);
 
   // Attachments
   const [uploading, setUploading] = useState(false);
@@ -448,6 +451,32 @@ export default function RepairDetailPage() {
     }
   };
 
+  const handleReturnBordereauChange = async (file: File | null) => {
+    setReturnBordereauFile(file);
+    setReturnTrackingAutoFilled(false);
+    setReturnTrackingNumber("");
+    if (!file) return;
+    setReturnExtractingTracking(true);
+    try {
+      const fd = new FormData();
+      fd.append("pdf", file);
+      const res = await fetch("/api/extract-tracking", { method: "POST", body: fd });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.tracking) {
+          setReturnTrackingNumber(data.tracking);
+          // Auto-generate Chronopost tracking URL from the number
+          const url = `https://www.chronopost.fr/tracking-no-powerful/tracking/suivi?listeNumerosLT=${encodeURIComponent(data.tracking)}`;
+          setReturnTrackingUrl(url);
+          setReturnTrackingAutoFilled(true);
+        }
+      }
+    } catch { /* ignore, user can fill manually */ }
+    finally {
+      setReturnExtractingTracking(false);
+    }
+  };
+
   const handleSendReturn = async () => {
     if (!returnBordereauFile) {
       toast.error("Veuillez sélectionner le bordereau retour (PDF)");
@@ -462,6 +491,7 @@ export default function RepairDetailPage() {
       const fd = new FormData();
       fd.append("bordereau", returnBordereauFile);
       fd.append("trackingUrl", returnTrackingUrl.trim());
+      if (returnTrackingNumber.trim()) fd.append("trackingNumber", returnTrackingNumber.trim());
       const res = await fetch(`/api/repairs/${repairId}/send-return`, {
         method: "POST",
         body: fd,
@@ -470,6 +500,8 @@ export default function RepairDetailPage() {
       toast.success("Bordereau retour envoyé — lien de suivi mis à jour ✓");
       setReturnBordereauFile(null);
       setReturnTrackingUrl("");
+      setReturnTrackingNumber("");
+      setReturnTrackingAutoFilled(false);
       const input = document.getElementById("return-bordereau-input") as HTMLInputElement;
       if (input) input.value = "";
       fetchRepair();
@@ -792,20 +824,49 @@ export default function RepairDetailPage() {
                   id="return-bordereau-input"
                   type="file"
                   accept="application/pdf"
-                  onChange={(e) => setReturnBordereauFile(e.target.files?.[0] || null)}
+                  onChange={(e) => handleReturnBordereauChange(e.target.files?.[0] || null)}
                   className="block w-full text-sm text-[#424245] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#f5f5f7] file:text-[#1d1d1f] hover:file:bg-[#e8e8ed] cursor-pointer border border-gray-200 rounded-lg p-1.5"
                 />
-                {returnBordereauFile && (
+                {returnExtractingTracking && (
+                  <p className="text-xs text-[#86868b] mt-1">🔍 Extraction du numéro de suivi...</p>
+                )}
+                {returnBordereauFile && !returnExtractingTracking && (
                   <p className="text-xs text-green-600 mt-1">✓ {returnBordereauFile.name}</p>
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-[#86868b] mb-1.5">Lien de suivi Packlink</label>
+                <label className="block text-xs font-medium text-[#86868b] mb-1.5">
+                  Numéro de suivi
+                  {returnTrackingAutoFilled && (
+                    <span className="ml-2 text-green-600 font-normal">✓ extrait automatiquement</span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  value={returnTrackingNumber}
+                  onChange={(e) => {
+                    setReturnTrackingNumber(e.target.value);
+                    setReturnTrackingAutoFilled(false);
+                    if (e.target.value.trim()) {
+                      setReturnTrackingUrl(`https://www.chronopost.fr/tracking-no-powerful/tracking/suivi?listeNumerosLT=${encodeURIComponent(e.target.value.trim())}`);
+                    }
+                  }}
+                  placeholder="ex. XS474454248FR"
+                  className="block w-full font-mono text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#86868b] mb-1.5">
+                  Lien de suivi
+                  {returnTrackingAutoFilled && (
+                    <span className="ml-2 text-green-600 font-normal">✓ généré automatiquement</span>
+                  )}
+                </label>
                 <input
                   type="url"
                   value={returnTrackingUrl}
-                  onChange={(e) => setReturnTrackingUrl(e.target.value)}
-                  placeholder="https://app.packlink.com/fr-fr/shipments/..."
+                  onChange={(e) => { setReturnTrackingUrl(e.target.value); setReturnTrackingAutoFilled(false); }}
+                  placeholder="https://www.chronopost.fr/tracking-no-powerful/tracking/suivi?..."
                   className="block w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:border-transparent"
                 />
               </div>

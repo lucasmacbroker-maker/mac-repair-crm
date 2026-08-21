@@ -15,6 +15,7 @@ export async function POST(
     const formData = await request.formData();
     const bordereauFile = formData.get("bordereau") as File | null;
     const returnTrackingUrl = (formData.get("trackingUrl") as string | null)?.trim();
+    const trackingNumber = (formData.get("trackingNumber") as string | null)?.trim() || "";
 
     if (!bordereauFile) {
       return NextResponse.json({ error: "Bordereau manquant" }, { status: 400 });
@@ -28,10 +29,13 @@ export async function POST(
       return NextResponse.json({ error: "Réparation introuvable" }, { status: 404 });
     }
 
-    // Update trackingLink so suivi page shows return tracking automatically
+    // Update trackingLink and outboundTracking so suivi page shows return tracking
     await prisma.repair.update({
       where: { id },
-      data: { trackingLink: returnTrackingUrl },
+      data: {
+        trackingLink: returnTrackingUrl,
+        ...(trackingNumber ? { outboundTracking: trackingNumber } : {}),
+      },
     });
 
     // Send email to client with bordereau attached

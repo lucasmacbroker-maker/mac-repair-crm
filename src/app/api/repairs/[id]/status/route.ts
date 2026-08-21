@@ -6,7 +6,7 @@ import { after } from "next/server";
 import { sendStatusUpdateEmail, sendInvoiceEmail } from "@/lib/email";
 import { createPaymentSession } from "@/lib/stripe";
 import { generateInvoicePDF } from "@/lib/invoice-pdf";
-// stripe.ts uses native fetch — no npm dependency needed
+import { saveFile } from "@/lib/attachments";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -127,6 +127,25 @@ export async function PUT(
             createdAt: new Date(),
             token: existing.token,
           });
+
+          // Upload invoice PDF to Vercel Blob and save as RepairAttachment
+          try {
+            const { storedName, url: blobUrl } = await saveFile(invoicePdf, "application/pdf");
+            const invoiceNumber = `FACT-${Date.now()}`;
+            await prisma.repairAttachment.create({
+              data: {
+                repairId: id,
+                fileName: `Facture-MacPlace-${invoiceNumber}.pdf`,
+                storedName,
+                url: blobUrl,
+                mimeType: "application/pdf",
+                size: invoicePdf.length,
+                type: "Facture",
+              },
+            });
+          } catch (uploadErr) {
+            console.error("Failed to upload invoice to Blob:", uploadErr);
+          }
 
           await sendInvoiceEmail(
             existing.clientEmail,

@@ -51,16 +51,19 @@ export async function PUT(
       updateData.closedAt = new Date();
     }
 
-    // If transitioning to DONE and finalCost is set: create Stripe payment link
+    // Use finalCost if set, otherwise fall back to estimatedCost
+    const invoiceCost = existing.finalCost > 0 ? existing.finalCost : existing.estimatedCost;
+
+    // If transitioning to DONE and a cost is set: create Stripe payment link
     let stripePaymentUrl: string | null = null;
-    if (status === "DONE" && existing.finalCost > 0) {
+    if (status === "DONE" && invoiceCost > 0) {
       try {
         stripePaymentUrl = await createPaymentSession({
           repairId: id,
           clientEmail: existing.clientEmail,
           macModel: existing.macModel,
           faultType: existing.faultType,
-          finalCost: existing.finalCost,
+          finalCost: invoiceCost,
           successUrl: `${APP_URL}/suivi/${existing.token}?payment=success`,
           cancelUrl: `${APP_URL}/suivi/${existing.token}?payment=cancelled`,
         });
@@ -101,7 +104,7 @@ export async function PUT(
     const clientName = `${existing.clientFirstName} ${existing.clientLastName}`;
 
     after(async () => {
-      if (status === "DONE" && stripePaymentUrl && existing.finalCost > 0) {
+      if (status === "DONE" && stripePaymentUrl && invoiceCost > 0) {
         // Send invoice email with PDF + Stripe payment link
         try {
           const invoicePdf = await generateInvoicePDF({
@@ -117,7 +120,7 @@ export async function PUT(
             serialNumber: existing.serialNumber || undefined,
             faultType: existing.faultType,
             faultDescription: existing.faultDescription || undefined,
-            finalCost: existing.finalCost,
+            finalCost: invoiceCost,
             createdAt: new Date(),
             token: existing.token,
           });
@@ -127,7 +130,7 @@ export async function PUT(
             clientName,
             existing.token,
             existing.macModel,
-            existing.finalCost,
+            invoiceCost,
             stripePaymentUrl,
             invoicePdf,
           );

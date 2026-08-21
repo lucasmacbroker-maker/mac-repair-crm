@@ -69,8 +69,8 @@ const styles = StyleSheet.create({
   ttcValue: { fontSize: 11, fontFamily: "Helvetica-Bold", color: "#fff" },
   guaranteeBox: { marginTop: 20, backgroundColor: "#f5f5f7", borderRadius: 4, padding: 11 },
   guaranteeText: { fontSize: 9, color: "#424245", lineHeight: 1.6 },
-  footer: { position: "absolute", bottom: 28, left: 40, right: 40, borderTopWidth: 1, borderTopColor: "#e0e0e0", paddingTop: 8, flexDirection: "row", justifyContent: "space-between" },
-  footerText: { fontSize: 7, color: "#aaa" },
+  footer: { position: "absolute", bottom: 20, left: 40, right: 40, borderTopWidth: 1, borderTopColor: "#e0e0e0", paddingTop: 8 },
+  footerText: { fontSize: 7, color: "#aaa", textAlign: "center", lineHeight: 1.6 },
 });
 
 function QuoteDoc({ data }: { data: QuoteData }) {
@@ -167,8 +167,12 @@ function QuoteDoc({ data }: { data: QuoteData }) {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>{MAC_PLACE.name} — {MAC_PLACE.address}, {MAC_PLACE.city}</Text>
-          <Text style={styles.footerText}>{MAC_PLACE.email} — {MAC_PLACE.phone}</Text>
+          <Text style={styles.footerText}>
+            {MAC_PLACE.name} — {MAC_PLACE.address}, {MAC_PLACE.city} — {MAC_PLACE.phone} — {MAC_PLACE.email}
+          </Text>
+          <Text style={styles.footerText}>
+            SARL ALCAS SOLUTIONS au capital de 5 000 € — SIREN 984449876 — RCS CRETEIL — NAF 4652Z — TVA intracommunautaire : FR49984449876
+          </Text>
         </View>
       </Page>
     </Document>

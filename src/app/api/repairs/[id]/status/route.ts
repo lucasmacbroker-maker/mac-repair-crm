@@ -7,6 +7,7 @@ import { sendStatusUpdateEmail, sendInvoiceEmail } from "@/lib/email";
 import { createPaymentSession } from "@/lib/stripe";
 import { generateInvoicePDF } from "@/lib/invoice-pdf";
 import { saveFile } from "@/lib/attachments";
+import { sendSMS } from "@/lib/sms";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -178,6 +179,20 @@ export async function PUT(
         } catch (err) {
           console.error("Failed to send status update email:", err);
         }
+      }
+
+      // Send SMS notification (non-blocking, best-effort)
+      if (existing.clientPhone) {
+        const suiviUrl = `${APP_URL}/suivi/${existing.token}`;
+        let smsBody: string;
+        if (status === "DONE" && stripePaymentUrl) {
+          smsBody = `Mac Place — Votre ${existing.macModel} est réparé ! Payez et suivez votre dossier : ${suiviUrl} (Ne pas répondre)`;
+        } else {
+          smsBody = `Mac Place — ${statusIcon} ${statusLabel} — Suivez votre dossier : ${suiviUrl} (Ne pas répondre)`;
+        }
+        sendSMS(existing.clientPhone, smsBody).catch((e) =>
+          console.error("SMS send failed:", e)
+        );
       }
     });
 

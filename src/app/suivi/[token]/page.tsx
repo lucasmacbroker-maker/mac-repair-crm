@@ -582,7 +582,7 @@ export default function TrackingPage() {
       )}
 
       {/* ── Payment link ─────────────────────────────────────────── */}
-      {repair.paymentLink && (
+      {repair.paymentLink && repair.status === "DONE" && (
         <div className="mb-8 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">

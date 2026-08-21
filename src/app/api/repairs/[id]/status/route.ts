@@ -69,10 +69,12 @@ export async function PUT(
         });
         updateData.paymentLink = stripePaymentUrl;
       } catch (err) {
-        console.error("Stripe payment session creation failed:", err);
+        console.error("[STRIPE ERROR] Payment session creation failed:", JSON.stringify(err));
         // Continue without blocking the status change
       }
     }
+
+    console.log(`[STATUS] repair=${id} status=${status} invoiceCost=${invoiceCost} stripeUrl=${stripePaymentUrl ? "OK" : "null"}`);
 
     const [repair] = await prisma.$transaction([
       prisma.repair.update({

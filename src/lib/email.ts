@@ -383,6 +383,68 @@ export async function sendQuoteValidatedEmail(
   }
 }
 
+export async function sendInvoiceEmail(
+  email: string,
+  clientName: string,
+  token: string,
+  macModel: string,
+  finalCost: number,
+  paymentUrl: string,
+  invoicePdfBuffer: Buffer,
+) {
+  const trackingUrl = `${APP_URL}/suivi/${token}`;
+  const num = token.slice(0, 8).toUpperCase();
+
+  try {
+    await transporter.sendMail({
+      from: FROM,
+      to: email,
+      subject: `${COMPANY} — Votre Mac est réparé — Facture et lien de paiement`,
+      attachments: [
+        {
+          filename: `Facture-MacPlace-FACT-${num}.pdf`,
+          content: invoicePdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1d1d1f;">
+          <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 8px;">Bonjour ${clientName},</h1>
+          <p style="color: #424245; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
+            Bonne nouvelle ! La réparation de votre <strong>${macModel}</strong> est terminée.<br/>
+            Veuillez trouver ci-joint votre <strong>facture</strong>.
+          </p>
+
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
+            <p style="color: #166534; font-size: 14px; margin: 0 0 4px;">Montant à régler</p>
+            <p style="color: #166534; font-size: 32px; font-weight: 700; margin: 0 0 16px;">${finalCost.toFixed(2).replace(".", ",")} €&nbsp;TTC</p>
+            <a href="${paymentUrl}" style="background-color: #16a34a; color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+              💳&nbsp; Payer maintenant
+            </a>
+          </div>
+
+          <p style="color: #424245; font-size: 14px; line-height: 1.6; margin-bottom: 8px;">
+            Vous pouvez également suivre l'avancement de votre dossier sur votre espace de suivi :
+          </p>
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${trackingUrl}" style="color: #0071e3; font-size: 14px;">${trackingUrl}</a>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
+          <p style="color: #86868b; font-size: 12px;">
+            ${COMPANY} — 5, rue Paul Vaillant Couturier, 94700 Maisons Alfort<br/>
+            07 82 71 21 23 — contact@macplace.fr
+          </p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send invoice email:", error);
+    return false;
+  }
+}
+
 export async function sendPostalRepairEmail(
   email: string,
   clientName: string,

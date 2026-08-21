@@ -3,7 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getStatusLabel, getStatusIcon } from "@/lib/constants";
 import { after } from "next/server";
-import { sendStatusUpdateEmail } from "@/lib/email";
+import { sendStatusUpdateEmail, sendInvoiceEmail } from "@/lib/email";
+import { createPaymentSession } from "@/lib/stripe";
+import { generateInvoicePDF } from "@/lib/invoice-pdf";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function PUT(
   request: Request,
@@ -47,6 +51,26 @@ export async function PUT(
       updateData.closedAt = new Date();
     }
 
+    // If transitioning to DONE and finalCost is set: create Stripe payment link
+    let stripePaymentUrl: string | null = null;
+    if (status === "DONE" && existing.finalCost > 0) {
+      try {
+        stripePaymentUrl = await createPaymentSession({
+          repairId: id,
+          clientEmail: existing.clientEmail,
+          macModel: existing.macModel,
+          faultType: existing.faultType,
+          finalCost: existing.finalCost,
+          successUrl: `${APP_URL}/suivi/${existing.token}?payment=success`,
+          cancelUrl: `${APP_URL}/suivi/${existing.token}?payment=cancelled`,
+        });
+        updateData.paymentLink = stripePaymentUrl;
+      } catch (err) {
+        console.error("Stripe payment session creation failed:", err);
+        // Continue without blocking the status change
+      }
+    }
+
     const [repair] = await prisma.$transaction([
       prisma.repair.update({
         where: { id },
@@ -72,22 +96,63 @@ export async function PUT(
       }),
     ]);
 
-    // Send status update email to client (non-blocking)
     const statusLabel = getStatusLabel(status, existing.repairType);
     const statusIcon = getStatusIcon(status, existing.repairType);
+    const clientName = `${existing.clientFirstName} ${existing.clientLastName}`;
 
     after(async () => {
-      try {
-        await sendStatusUpdateEmail(
-          existing.clientEmail,
-          `${existing.clientFirstName} ${existing.clientLastName}`,
-          existing.token,
-          existing.macModel,
-          statusLabel,
-          statusIcon
-        );
-      } catch (err) {
-        console.error("Failed to send status update email:", err);
+      if (status === "DONE" && stripePaymentUrl && existing.finalCost > 0) {
+        // Send invoice email with PDF + Stripe payment link
+        try {
+          const invoicePdf = await generateInvoicePDF({
+            id,
+            clientFirstName: existing.clientFirstName,
+            clientLastName: existing.clientLastName,
+            clientEmail: existing.clientEmail,
+            clientPhone: existing.clientPhone,
+            clientAddress: existing.clientAddress || undefined,
+            clientCity: existing.clientCity || undefined,
+            clientPostalCode: existing.clientPostalCode || undefined,
+            macModel: existing.macModel,
+            serialNumber: existing.serialNumber || undefined,
+            faultType: existing.faultType,
+            faultDescription: existing.faultDescription || undefined,
+            finalCost: existing.finalCost,
+            createdAt: new Date(),
+            token: existing.token,
+          });
+
+          await sendInvoiceEmail(
+            existing.clientEmail,
+            clientName,
+            existing.token,
+            existing.macModel,
+            existing.finalCost,
+            stripePaymentUrl,
+            invoicePdf,
+          );
+        } catch (err) {
+          console.error("Failed to send invoice email:", err);
+          // Fallback to generic status email
+          try {
+            await sendStatusUpdateEmail(
+              existing.clientEmail, clientName, existing.token,
+              existing.macModel, statusLabel, statusIcon
+            );
+          } catch (e2) {
+            console.error("Failed to send fallback status email:", e2);
+          }
+        }
+      } else {
+        // Send regular status update email for all other statuses
+        try {
+          await sendStatusUpdateEmail(
+            existing.clientEmail, clientName, existing.token,
+            existing.macModel, statusLabel, statusIcon
+          );
+        } catch (err) {
+          console.error("Failed to send status update email:", err);
+        }
       }
     });
 

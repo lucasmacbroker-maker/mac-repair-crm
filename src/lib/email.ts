@@ -558,3 +558,68 @@ export async function sendPostalRepairEmail(
     return false;
   }
 }
+
+export async function sendReturnShipmentEmail(
+  email: string,
+  clientName: string,
+  token: string,
+  macModel: string,
+  returnTrackingUrl: string,
+  bordereauBuffer: Buffer,
+) {
+  const suiviUrl = `${APP_URL}/suivi/${token}`;
+
+  try {
+    await transporter.sendMail({
+      from: FROM,
+      to: email,
+      subject: `${COMPANY} — Votre Mac est en route vers vous !`,
+      attachments: [
+        {
+          filename: `Bordereau-Retour-MacPlace.pdf`,
+          content: bordereauBuffer,
+          contentType: "application/pdf",
+        },
+      ],
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1d1d1f;">
+          <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 8px;">Bonjour ${clientName},</h1>
+          <p style="color: #424245; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
+            Votre <strong>${macModel}</strong> est en cours d'acheminement vers vous.<br/>
+            Vous trouverez ci-joint le bordereau d'expédition retour.
+          </p>
+
+          <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
+            <p style="color: #0369a1; font-size: 15px; margin: 0 0 16px; font-weight: 600;">📦 Suivez votre colis en temps réel</p>
+            <a href="${returnTrackingUrl}" style="background-color: #0071e3; color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+              Suivre mon colis
+            </a>
+          </div>
+
+          <p style="color: #424245; font-size: 14px; line-height: 1.6; margin-bottom: 8px;">
+            Vous pouvez également consulter votre espace de suivi :
+          </p>
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${suiviUrl}" style="color: #0071e3; font-size: 14px;">${suiviUrl}</a>
+          </div>
+
+          <p style="color: #424245; font-size: 14px; line-height: 1.6;">
+            Merci pour votre confiance. N'hésitez pas à nous contacter si vous avez des questions.<br/>
+            Bien cordialement,<br/>
+            <strong>${COMPANY}</strong>
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
+          <p style="color: #86868b; font-size: 12px;">
+            ${COMPANY} — 5, rue Paul Vaillant Couturier, 94700 Maisons Alfort<br/>
+            07 82 71 21 23 — contact@macplace.fr
+          </p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send return shipment email:", error);
+    return false;
+  }
+}

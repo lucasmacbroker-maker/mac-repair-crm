@@ -551,7 +551,7 @@ export default function TrackingPage() {
           </div>
         )}
 
-      {/* ── Tracking link (Chronopost) ─────────────────────────── */}
+      {/* ── Tracking link ─────────────────────────────────────── */}
       {repair.trackingLink && (
         <div className="mb-8 p-5 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100 rounded-2xl">
           <div className="flex items-start gap-3">
@@ -560,10 +560,14 @@ export default function TrackingPage() {
             </div>
             <div>
               <h3 className="font-semibold text-[#1d1d1f] mb-1">
-                Suivi de votre colis
+                {["RESHIPPED", "CLOSED"].includes(repair.status)
+                  ? "Suivi de votre colis retour"
+                  : "Suivi de votre colis"}
               </h3>
               <p className="text-sm text-[#86868b] mb-3">
-                Suivez votre colis en temps reel en cliquant sur le lien ci-dessous.
+                {["RESHIPPED", "CLOSED"].includes(repair.status)
+                  ? "Votre Mac est en route ! Suivez votre colis retour en cliquant ci-dessous."
+                  : "Suivez votre colis en temps reel en cliquant sur le lien ci-dessous."}
               </p>
               <a
                 href={repair.trackingLink}

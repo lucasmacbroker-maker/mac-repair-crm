@@ -157,6 +157,11 @@ export default function RepairDetailPage() {
   const [sendingDocuments, setSendingDocuments] = useState(false);
   const [bordereauFile, setBordereauFile] = useState<File | null>(null);
 
+  // Return shipment
+  const [sendingReturn, setSendingReturn] = useState(false);
+  const [returnBordereauFile, setReturnBordereauFile] = useState<File | null>(null);
+  const [returnTrackingUrl, setReturnTrackingUrl] = useState("");
+
   // Attachments
   const [uploading, setUploading] = useState(false);
   const [attachmentType, setAttachmentType] = useState("Photo");
@@ -440,6 +445,38 @@ export default function RepairDetailPage() {
       toast.error("Erreur lors de l'envoi");
     } finally {
       setSendingDocuments(false);
+    }
+  };
+
+  const handleSendReturn = async () => {
+    if (!returnBordereauFile) {
+      toast.error("Veuillez sélectionner le bordereau retour (PDF)");
+      return;
+    }
+    if (!returnTrackingUrl.trim()) {
+      toast.error("Veuillez saisir le lien de suivi Packlink");
+      return;
+    }
+    setSendingReturn(true);
+    try {
+      const fd = new FormData();
+      fd.append("bordereau", returnBordereauFile);
+      fd.append("trackingUrl", returnTrackingUrl.trim());
+      const res = await fetch(`/api/repairs/${repairId}/send-return`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Bordereau retour envoyé — lien de suivi mis à jour ✓");
+      setReturnBordereauFile(null);
+      setReturnTrackingUrl("");
+      const input = document.getElementById("return-bordereau-input") as HTMLInputElement;
+      if (input) input.value = "";
+      fetchRepair();
+    } catch {
+      toast.error("Erreur lors de l'envoi");
+    } finally {
+      setSendingReturn(false);
     }
   };
 
@@ -734,6 +771,57 @@ export default function RepairDetailPage() {
             {bordereauFile && (
               <p className="text-xs text-green-600 mt-2">✓ {bordereauFile.name} sélectionné</p>
             )}
+          </div>
+        </Card>
+      )}
+
+      {/* Return shipment card — POSTAL repairs, when DONE or later */}
+      {repair.repairType === "POSTAL" && ["DONE", "RESHIPPED", "CLOSED"].includes(repair.status) && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>📦 Expédition retour client</CardTitle>
+          </CardHeader>
+          <div className="px-6 pb-6">
+            <p className="text-sm text-[#86868b] mb-4">
+              Une fois le paiement reçu, téléchargez le bordereau retour depuis Packlink et collez le lien de suivi. Le client recevra un email avec le bordereau et le lien, et sa page de suivi sera mise à jour automatiquement.
+            </p>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[#86868b] mb-1.5">Bordereau retour Packlink (PDF)</label>
+                <input
+                  id="return-bordereau-input"
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setReturnBordereauFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-[#424245] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#f5f5f7] file:text-[#1d1d1f] hover:file:bg-[#e8e8ed] cursor-pointer border border-gray-200 rounded-lg p-1.5"
+                />
+                {returnBordereauFile && (
+                  <p className="text-xs text-green-600 mt-1">✓ {returnBordereauFile.name}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#86868b] mb-1.5">Lien de suivi Packlink</label>
+                <input
+                  type="url"
+                  value={returnTrackingUrl}
+                  onChange={(e) => setReturnTrackingUrl(e.target.value)}
+                  placeholder="https://app.packlink.com/fr-fr/shipments/..."
+                  className="block w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:border-transparent"
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSendReturn}
+                  loading={sendingReturn}
+                  disabled={!returnBordereauFile || !returnTrackingUrl.trim() || sendingReturn}
+                >
+                  <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Envoyer au client
+                </Button>
+              </div>
+            </div>
           </div>
         </Card>
       )}

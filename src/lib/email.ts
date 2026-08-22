@@ -390,15 +390,39 @@ export async function sendQuoteEmail(
   macModel: string,
   estimatedCost: number,
   quotePdfBuffer: Buffer,
+  appointmentDate?: Date,
+  isHome = false,
 ) {
   const trackingUrl = `${APP_URL}/suivi/${token}`;
   const num = token.slice(0, 8).toUpperCase();
+
+  let rdvBlock = "";
+  if (appointmentDate) {
+    const dateStr = appointmentDate.toLocaleDateString("fr-FR", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric",
+    });
+    const timeStr = appointmentDate.toLocaleTimeString("fr-FR", {
+      hour: "2-digit", minute: "2-digit",
+    });
+    const addrLine = isHome
+      ? `Notre technicien se déplacera à votre domicile.`
+      : ADDR || "";
+    rdvBlock = `
+      <div style="background: #f5f5f7; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+        <p style="color: #86868b; font-size: 12px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.8px;">Rendez-vous confirmé</p>
+        <p style="color: #1d1d1f; font-size: 18px; font-weight: 600; margin: 0 0 4px; text-transform: capitalize;">${dateStr}</p>
+        <p style="color: #0071e3; font-size: 26px; font-weight: 700; margin: 0 0 14px;">${timeStr}</p>
+        <p style="color: #424245; font-size: 14px; margin: 0; line-height: 1.5;">${addrLine}</p>
+      </div>`;
+  }
 
   try {
     await transporter.sendMail({
       from: FROM,
       to: email,
-      subject: `${COMPANY} — Votre devis de réparation`,
+      subject: appointmentDate
+        ? `${COMPANY} — Votre devis et confirmation de rendez-vous`
+        : `${COMPANY} — Votre devis de réparation`,
       attachments: [
         {
           filename: `Devis-MacPlace-DEVIS-${num}.pdf`,
@@ -412,12 +436,9 @@ export async function sendQuoteEmail(
           <p style="color: #424245; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
             Veuillez trouver ci-joint le <strong>devis</strong> pour la réparation de votre <strong>${macModel}</strong>.
           </p>
-          <div style="background: #f5f5f7; border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
-            <p style="color: #1d1d1f; font-size: 14px; margin: 0 0 4px;">Montant estimé</p>
-            <p style="color: #0071e3; font-size: 32px; font-weight: 700; margin: 0;">${estimatedCost.toFixed(2).replace(".", ",")} €&nbsp;TTC</p>
-          </div>
+          ${rdvBlock}
           <p style="color: #424245; font-size: 15px; line-height: 1.6;">
-            Ce devis est valable 30 jours. Pour accepter ou suivre votre dossier, cliquez ci-dessous.
+            Ce devis est valable 30 jours. Suivez l'avancement de votre réparation via votre dossier en ligne.
           </p>
           <div style="text-align: center; margin: 32px 0;">
             <a href="${trackingUrl}" style="background-color: #0071e3; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 500;">

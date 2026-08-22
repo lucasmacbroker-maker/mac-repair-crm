@@ -252,7 +252,10 @@ export async function POST(request: Request) {
           console.error("Failed to send tracking email:", err);
         }
 
-        // Send devis PDF for LOCAL repairs when a price is set
+        // For LOCAL/HOME: send one combined email (devis PDF + RDV confirmation if applicable)
+        const isHome = repairType === "HOME";
+        const apptDate = appointmentDate ? new Date(appointmentDate) : undefined;
+
         if (repairType === "LOCAL" && estimatedCost > 0) {
           try {
             const quotePdf = await generateQuotePDF({
@@ -272,25 +275,25 @@ export async function POST(request: Request) {
               createdAt: repair.createdAt,
               token,
             });
-            await sendQuoteEmail(clientEmail, clientName, token, macModel, estimatedCost, quotePdf);
+            // Single email: devis + RDV info combined
+            await sendQuoteEmail(clientEmail, clientName, token, macModel, estimatedCost, quotePdf, apptDate, isHome);
           } catch (err) {
             console.error("Failed to send LOCAL quote email:", err);
           }
-        }
-
-        // Send appointment confirmation email + SMS
-        if (appointmentDate && (repairType === "LOCAL" || repairType === "HOME")) {
-          const isHome = repairType === "HOME";
-          const fullClientAddress = [clientAddress, clientPostalCode, clientCity].filter(Boolean).join(", ");
-          const apptDate = new Date(appointmentDate);
+        } else if (apptDate) {
+          // HOME repair or LOCAL without price: send appointment confirmation email only
           try {
             await sendAppointmentConfirmationEmail(
-              clientEmail, clientName, token, macModel,
-              apptDate, isHome, isHome ? fullClientAddress : "",
+              clientEmail, clientName, token, macModel, apptDate, isHome,
+              isHome ? [clientAddress, clientPostalCode, clientCity].filter(Boolean).join(", ") : "",
             );
           } catch (err) {
             console.error("Failed to send appointment confirmation:", err);
           }
+        }
+
+        // SMS confirmation for any repair with a date
+        if (apptDate) {
           const addr = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "";
           const dateStr = apptDate.toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
           const timeStr = apptDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });

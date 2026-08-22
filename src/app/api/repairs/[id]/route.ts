@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireRole } from "@/lib/auth";
 import { after } from "next/server";
-import { sendLinkNotificationEmail } from "@/lib/email";
+import { sendLinkNotificationEmail, sendAppointmentConfirmationEmail, sendQuoteEmail } from "@/lib/email";
+import { sendSMS } from "@/lib/sms";
+import { generateQuotePDF } from "@/lib/quote-pdf";
 
 export async function GET(
   request: Request,
@@ -161,7 +163,6 @@ export async function PUT(
       },
     });
 
-    // Notify client when a tracking or payment link is added/changed
     const clientName = `${repair.clientFirstName} ${repair.clientLastName}`;
 
     const trackingLinkChanged =
@@ -169,30 +170,104 @@ export async function PUT(
     const paymentLinkChanged =
       body.paymentLink && body.paymentLink !== existing.paymentLink;
 
-    if (trackingLinkChanged || paymentLinkChanged) {
-      after(async () => {
-        if (trackingLinkChanged) {
+    // Appointment confirmation: send email + SMS when appointmentDate is set/changed
+    const appointmentChanged =
+      body.appointmentDate &&
+      body.appointmentDate !== existing.appointmentDate?.toISOString();
+
+    // Quote PDF for LOCAL repairs: send when estimatedCost goes from 0/null to a value
+    const isLocalRepair = repair.repairType === "LOCAL";
+    const estimatedCostAdded =
+      isLocalRepair &&
+      body.estimatedCost &&
+      body.estimatedCost > 0 &&
+      (!existing.estimatedCost || existing.estimatedCost === 0);
+
+    after(async () => {
+      if (trackingLinkChanged) {
+        try {
+          await sendLinkNotificationEmail(
+            repair.clientEmail, clientName, repair.token, repair.macModel,
+            "tracking", body.trackingLink
+          );
+        } catch (err) {
+          console.error("Failed to send tracking link email:", err);
+        }
+      }
+      if (paymentLinkChanged) {
+        try {
+          await sendLinkNotificationEmail(
+            repair.clientEmail, clientName, repair.token, repair.macModel,
+            "payment", body.paymentLink
+          );
+        } catch (err) {
+          console.error("Failed to send payment link email:", err);
+        }
+      }
+
+      if (appointmentChanged && repair.appointmentDate) {
+        const isHome = repair.repairType === "HOME";
+        const addr = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "";
+        const apptDate = repair.appointmentDate;
+
+        const dateStr = apptDate.toLocaleDateString("fr-FR", {
+          weekday: "long", year: "numeric", month: "long", day: "numeric",
+        });
+        const timeStr = apptDate.toLocaleTimeString("fr-FR", {
+          hour: "2-digit", minute: "2-digit",
+        });
+
+        try {
+          await sendAppointmentConfirmationEmail(
+            repair.clientEmail, clientName, repair.token, repair.macModel,
+            apptDate, isHome,
+            isHome ? [repair.clientAddress, repair.clientPostalCode, repair.clientCity].filter(Boolean).join(", ") : ""
+          );
+        } catch (err) {
+          console.error("Failed to send appointment confirmation email:", err);
+        }
+
+        if (repair.clientPhone) {
+          const locationSMS = isHome
+            ? `Notre technicien se déplacera à votre adresse.`
+            : `Adresse atelier : ${addr}`;
+          const smsBody = `Mac Place — RDV confirmé pour votre ${repair.macModel} le ${dateStr} à ${timeStr}. ${locationSMS} Répondez STOP pour vous désinscrire.`;
           try {
-            await sendLinkNotificationEmail(
-              repair.clientEmail, clientName, repair.token, repair.macModel,
-              "tracking", body.trackingLink
-            );
+            await sendSMS(repair.clientPhone, smsBody);
           } catch (err) {
-            console.error("Failed to send tracking link email:", err);
+            console.error("Failed to send appointment SMS:", err);
           }
         }
-        if (paymentLinkChanged) {
-          try {
-            await sendLinkNotificationEmail(
-              repair.clientEmail, clientName, repair.token, repair.macModel,
-              "payment", body.paymentLink
-            );
-          } catch (err) {
-            console.error("Failed to send payment link email:", err);
-          }
+      }
+
+      if (estimatedCostAdded) {
+        try {
+          const pdfBuffer = await generateQuotePDF({
+            id: repair.id,
+            clientFirstName: repair.clientFirstName,
+            clientLastName: repair.clientLastName,
+            clientEmail: repair.clientEmail,
+            clientPhone: repair.clientPhone || "",
+            clientAddress: repair.clientAddress || undefined,
+            clientCity: repair.clientCity || undefined,
+            clientPostalCode: repair.clientPostalCode || undefined,
+            macModel: repair.macModel,
+            serialNumber: repair.serialNumber || undefined,
+            faultType: repair.faultType,
+            faultDescription: repair.faultDescription || undefined,
+            estimatedCost: body.estimatedCost,
+            createdAt: repair.createdAt,
+            token: repair.token,
+          });
+          await sendQuoteEmail(
+            repair.clientEmail, clientName, repair.token, repair.macModel,
+            body.estimatedCost, pdfBuffer
+          );
+        } catch (err) {
+          console.error("Failed to send quote PDF email:", err);
         }
-      });
-    }
+      }
+    });
 
     return NextResponse.json(repair);
   } catch (error) {

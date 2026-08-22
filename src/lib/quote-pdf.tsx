@@ -21,8 +21,8 @@ export interface QuoteData {
 
 const MAC_PLACE = {
   name: "Mac Place",
-  address: "5, rue Paul Vaillant Couturier",
-  city: "94700 Maisons Alfort",
+  address: "39, rue Edouard Vaillant",
+  city: "94140 Alfortville",
   phone: "07 82 71 21 23",
   email: "contact@macplace.fr",
 };

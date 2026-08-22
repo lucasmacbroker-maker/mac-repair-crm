@@ -3,8 +3,9 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { after } from "next/server";
-import { sendTrackingEmail, sendNewRepairNotification, sendAppointmentConfirmationEmail, sendPostalRepairEmail } from "@/lib/email";
+import { sendTrackingEmail, sendNewRepairNotification, sendAppointmentConfirmationEmail, sendPostalRepairEmail, sendQuoteEmail } from "@/lib/email";
 import { generateQuotePDF } from "@/lib/quote-pdf";
+import { sendSMS } from "@/lib/sms";
 
 export async function GET(request: Request) {
   try {
@@ -250,20 +251,54 @@ export async function POST(request: Request) {
         } catch (err) {
           console.error("Failed to send tracking email:", err);
         }
+
+        // Send devis PDF for LOCAL repairs when a price is set
+        if (repairType === "LOCAL" && estimatedCost > 0) {
+          try {
+            const quotePdf = await generateQuotePDF({
+              id: repair.id,
+              clientFirstName,
+              clientLastName,
+              clientEmail,
+              clientPhone,
+              clientAddress,
+              clientCity,
+              clientPostalCode,
+              macModel,
+              serialNumber,
+              faultType,
+              faultDescription,
+              estimatedCost,
+              createdAt: repair.createdAt,
+              token,
+            });
+            await sendQuoteEmail(clientEmail, clientName, token, macModel, estimatedCost, quotePdf);
+          } catch (err) {
+            console.error("Failed to send LOCAL quote email:", err);
+          }
+        }
+
+        // Send appointment confirmation email + SMS
         if (appointmentDate && (repairType === "LOCAL" || repairType === "HOME")) {
+          const isHome = repairType === "HOME";
           const fullClientAddress = [clientAddress, clientPostalCode, clientCity].filter(Boolean).join(", ");
+          const apptDate = new Date(appointmentDate);
           try {
             await sendAppointmentConfirmationEmail(
-              clientEmail,
-              clientName,
-              token,
-              macModel,
-              new Date(appointmentDate),
-              repairType === "HOME",
-              fullClientAddress,
+              clientEmail, clientName, token, macModel,
+              apptDate, isHome, isHome ? fullClientAddress : "",
             );
           } catch (err) {
             console.error("Failed to send appointment confirmation:", err);
+          }
+          const addr = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "";
+          const dateStr = apptDate.toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+          const timeStr = apptDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+          const locationSMS = isHome ? `Notre technicien se déplacera à votre adresse.` : `Adresse atelier : ${addr}`;
+          try {
+            await sendSMS(clientPhone, `Mac Place — RDV confirmé pour votre ${macModel} le ${dateStr} à ${timeStr}. ${locationSMS} Répondez STOP pour vous désinscrire.`);
+          } catch (err) {
+            console.error("Failed to send appointment SMS:", err);
           }
         }
       }

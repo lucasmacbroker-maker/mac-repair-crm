@@ -1357,13 +1357,15 @@ export default function RepairDetailPage() {
               value={String(editData.estimatedCost || "")}
               onChange={(e) => setEditData({ ...editData, estimatedCost: parseFloat(e.target.value) || 0 })}
             />
-            <Input
-              label="Cout final"
-              type="number"
-              step="0.01"
-              value={String(editData.finalCost || "")}
-              onChange={(e) => setEditData({ ...editData, finalCost: parseFloat(e.target.value) || 0 })}
-            />
+            {repair?.repairType === "POSTAL" && (
+              <Input
+                label="Cout final"
+                type="number"
+                step="0.01"
+                value={String(editData.finalCost || "")}
+                onChange={(e) => setEditData({ ...editData, finalCost: parseFloat(e.target.value) || 0 })}
+              />
+            )}
             {(repair?.repairType === "LOCAL" || repair?.repairType === "HOME") && (
               <Input
                 label="Date et heure du rendez-vous"

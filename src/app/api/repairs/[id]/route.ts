@@ -171,17 +171,18 @@ export async function PUT(
       body.paymentLink && body.paymentLink !== existing.paymentLink;
 
     // Appointment confirmation: send email + SMS when appointmentDate is set/changed
-    const appointmentChanged =
-      body.appointmentDate &&
-      body.appointmentDate !== existing.appointmentDate?.toISOString();
+    const newApptTime = body.appointmentDate ? new Date(body.appointmentDate).getTime() : null;
+    const oldApptTime = existing.appointmentDate ? existing.appointmentDate.getTime() : null;
+    const appointmentChanged = newApptTime !== null && newApptTime !== oldApptTime;
 
     // Quote PDF for LOCAL repairs: send when estimatedCost goes from 0/null to a value
     const isLocalRepair = repair.repairType === "LOCAL";
     const estimatedCostAdded =
       isLocalRepair &&
-      body.estimatedCost &&
-      body.estimatedCost > 0 &&
-      (!existing.estimatedCost || existing.estimatedCost === 0);
+      Number(body.estimatedCost) > 0 &&
+      Number(existing.estimatedCost) === 0;
+
+    console.log("[PUT repair] appointmentChanged:", appointmentChanged, "| estimatedCostAdded:", estimatedCostAdded, "| repairType:", repair.repairType);
 
     after(async () => {
       if (trackingLinkChanged) {

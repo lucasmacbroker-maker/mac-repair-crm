@@ -127,6 +127,7 @@ export async function PUT(
       "paymentLink",
       "estimatedCost",
       "finalCost",
+      "location",
       "technicianId",
     ];
 

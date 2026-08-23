@@ -44,7 +44,8 @@ model Repair {
   faultDescription String   @default("")
 
   // Repair info
-  repairType       String   // POSTAL or LOCAL
+  repairType       String   // POSTAL, LOCAL or HOME
+  location         String   @default("PARIS") // PARIS or NICE
   status           String   @default("PENDING")
   priority         String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
 

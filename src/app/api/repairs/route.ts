@@ -7,6 +7,11 @@ import { sendTrackingEmail, sendNewRepairNotification, sendAppointmentConfirmati
 import { generateQuotePDF } from "@/lib/quote-pdf";
 import { sendSMS } from "@/lib/sms";
 
+const ADDRESSES: Record<string, string> = {
+  PARIS: "39 rue Edouard Vaillant, 94140 Alfortville",
+  NICE: "12 rue François de Paule, 06300 Nice",
+};
+
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
@@ -131,6 +136,7 @@ export async function POST(request: Request) {
     const estimatedCost   = parseFloat(g("estimatedCost") || "0") || 0;
     const estimatedReturn = g("estimatedReturn") || null;
     const appointmentDate = g("appointmentDate") || null;
+    const location        = g("location") || "PARIS";
     const technicianId    = g("technicianId") || null;
     const bordereauFile   = formData.get("bordereau") as File | null;
 
@@ -172,6 +178,7 @@ export async function POST(request: Request) {
         faultType,
         faultDescription: faultDescription || "",
         repairType,
+        location,
         status: repairType === "LOCAL" ? "UPCOMING" : "PENDING",
         priority: priority || "NORMAL",
         inboundTracking: inboundTracking || "",
@@ -271,17 +278,19 @@ export async function POST(request: Request) {
               createdAt: repair.createdAt,
               token,
             });
-            // Single email: devis + RDV info combined (client address for HOME)
-            await sendQuoteEmail(clientEmail, clientName, token, macModel, estimatedCost, quotePdf, apptDate, isHome, isHome ? fullClientAddress : "");
+            const atelierAddr = ADDRESSES[location] || ADDRESSES.PARIS;
+            // Single email: devis + RDV info combined
+            await sendQuoteEmail(clientEmail, clientName, token, macModel, estimatedCost, quotePdf, apptDate, isHome, isHome ? fullClientAddress : atelierAddr);
           } catch (err) {
             console.error("Failed to send quote email:", err);
           }
         } else if (apptDate) {
           // LOCAL/HOME without price: send appointment confirmation email only
+          const atelierAddr = ADDRESSES[location] || ADDRESSES.PARIS;
           try {
             await sendAppointmentConfirmationEmail(
               clientEmail, clientName, token, macModel, apptDate, isHome,
-              isHome ? fullClientAddress : "",
+              isHome ? fullClientAddress : atelierAddr,
             );
           } catch (err) {
             console.error("Failed to send appointment confirmation:", err);
@@ -290,12 +299,12 @@ export async function POST(request: Request) {
 
         // SMS confirmation for any repair with a date
         if (apptDate) {
-          const addr = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "";
+          const atelierAddr = ADDRESSES[location] || ADDRESSES.PARIS;
           const dateStr = apptDate.toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Europe/Paris" });
           const timeStr = apptDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
           const locationSMS = isHome
             ? fullClientAddress ? `Adresse d'intervention : ${fullClientAddress}` : `Notre technicien se déplacera à votre adresse.`
-            : `Adresse atelier : ${addr}`;
+            : `Adresse atelier : ${atelierAddr}`;
           try {
             await sendSMS(clientPhone, `Mac Place — RDV confirmé pour votre ${macModel} le ${dateStr} à ${timeStr}. ${locationSMS} Répondez STOP pour vous désinscrire.`);
           } catch (err) {

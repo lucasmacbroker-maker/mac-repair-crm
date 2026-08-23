@@ -53,6 +53,7 @@ export default function NewRepairPage() {
 
   // Appointment (LOCAL only)
   const [appointmentDate, setAppointmentDate] = useState("");
+  const [location, setLocation] = useState<"PARIS" | "NICE">("PARIS");
 
   // Bordereau Packlink (POSTAL only)
   const [bordereauFile, setBordereauFile] = useState<File | null>(null);
@@ -108,6 +109,7 @@ export default function NewRepairPage() {
       fd.append("faultType", faultType);
       fd.append("faultDescription", faultDescription.trim());
       fd.append("repairType", repairType);
+      fd.append("location", repairType === "POSTAL" ? "PARIS" : location);
       fd.append("priority", priority);
       fd.append("estimatedCost", estimatedCost ? estimatedCost : "0");
       fd.append("appointmentDate", appointmentDate ? new Date(appointmentDate).toISOString() : "");
@@ -381,6 +383,43 @@ export default function NewRepairPage() {
               ))}
             </div>
           </div>
+
+          {(repairType === "LOCAL" || repairType === "HOME") && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Atelier</label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: "PARIS", label: "Paris", desc: "39 rue Edouard Vaillant, Alfortville" },
+                  { value: "NICE", label: "Nice", desc: "12 rue François de Paule, 06300 Nice" },
+                ].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      location === opt.value ? "border-[#0071e3] bg-blue-50/50" : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="location"
+                      value={opt.value}
+                      checked={location === opt.value}
+                      onChange={() => setLocation(opt.value as "PARIS" | "NICE")}
+                      className="sr-only"
+                    />
+                    <div className={`h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                      location === opt.value ? "border-[#0071e3]" : "border-gray-300"
+                    }`}>
+                      {location === opt.value && <div className="h-2.5 w-2.5 rounded-full bg-[#0071e3]" />}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-[#1d1d1f]">{opt.label}</p>
+                      <p className="text-xs text-[#86868b]">{opt.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 

@@ -198,7 +198,7 @@ export async function PUT(
         if (status === "DONE") {
           sendSMS(
             existing.clientPhone,
-            `Mac Place — Merci pour votre confiance ! Votre avis nous aide beaucoup, ca prend 30 secondes : https://g.page/r/CbXhF3Z6Q3tNEAE/review Repondez STOP pour vous desinscrire.`
+            `Merci pour votre confiance ! Pouvez-vous laisser un avis, cela m'aiderait beaucoup 🙂\nBonne journée\nLucas\nhttps://g.page/r/CbXhF3Z6Q3tNEAE/review`
           ).catch((e) => console.error("Review SMS send failed:", e));
         }
       }

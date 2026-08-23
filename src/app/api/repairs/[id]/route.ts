@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireRole } from "@/lib/auth";
 import { after } from "next/server";
-import { sendLinkNotificationEmail, sendAppointmentConfirmationEmail, sendQuoteEmail } from "@/lib/email";
+import { sendLinkNotificationEmail, sendAppointmentConfirmationEmail, sendQuoteEmail, sendTechnicianAppointmentNotification } from "@/lib/email";
 import { sendSMS } from "@/lib/sms";
 import { generateQuotePDF } from "@/lib/quote-pdf";
 
@@ -209,7 +209,13 @@ export async function PUT(
 
       if (appointmentChanged && repair.appointmentDate) {
         const isHome = repair.repairType === "HOME";
-        const addr = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "";
+        const repairLocation = repair.location || "PARIS";
+        const ADDRESSES: Record<string, string> = {
+          PARIS: "39 rue Edouard Vaillant, 94140 Alfortville",
+          NICE: "12 rue François de Paule, 06300 Nice",
+        };
+        const atelierAddr = ADDRESSES[repairLocation] || ADDRESSES.PARIS;
+        const fullClientAddress = [repair.clientAddress, repair.clientPostalCode, repair.clientCity].filter(Boolean).join(", ");
         const apptDate = repair.appointmentDate;
 
         const dateStr = apptDate.toLocaleDateString("fr-FR", {
@@ -223,16 +229,31 @@ export async function PUT(
           await sendAppointmentConfirmationEmail(
             repair.clientEmail, clientName, repair.token, repair.macModel,
             apptDate, isHome,
-            isHome ? [repair.clientAddress, repair.clientPostalCode, repair.clientCity].filter(Boolean).join(", ") : ""
+            isHome ? fullClientAddress : atelierAddr,
+            repairLocation,
           );
         } catch (err) {
           console.error("Failed to send appointment confirmation email:", err);
         }
 
+        // Notify Nice technician (Antoine) when appointment changes
+        if (repairLocation === "NICE") {
+          try {
+            await sendTechnicianAppointmentNotification(
+              "macbrokeridf@gmail.com",
+              clientName, repair.clientPhone || "", repair.macModel,
+              repair.faultType, repair.faultDescription || "",
+              apptDate, repair.id, isHome, fullClientAddress,
+            );
+          } catch (err) {
+            console.error("Failed to send technician notification:", err);
+          }
+        }
+
         if (repair.clientPhone) {
           const locationSMS = isHome
             ? `Notre technicien se déplacera à votre adresse.`
-            : `Adresse atelier : ${addr}`;
+            : `Adresse atelier : ${atelierAddr}`;
           const smsBody = `Mac Place — RDV confirmé pour votre ${repair.macModel} le ${dateStr} à ${timeStr}. ${locationSMS} Répondez STOP pour vous désinscrire.`;
           try {
             await sendSMS(repair.clientPhone, smsBody);

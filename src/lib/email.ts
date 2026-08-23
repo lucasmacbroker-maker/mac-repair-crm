@@ -16,6 +16,11 @@ const FROM = process.env.SMTP_FROM || "Mac Place <lucas.macbroker@gmail.com>";
 const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME || "Mac Place";
 const ADDR = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "";
 
+const LOCATION_INFO: Record<string, { address: string; phone: string }> = {
+  PARIS: { address: "39 rue Edouard Vaillant, 94140 Alfortville", phone: "07 82 71 21 23" },
+  NICE:  { address: "12 rue François de Paule, 06300 Nice",       phone: "06 51 11 59 12" },
+};
+
 export async function sendTrackingEmail(
   email: string,
   clientName: string,
@@ -282,27 +287,29 @@ export async function sendAppointmentConfirmationEmail(
   appointmentDate: Date,
   isHome = false,
   clientAddress = "",
+  location = "PARIS",
 ) {
   const trackingUrl = `${APP_URL}/suivi/${token}`;
+  const locInfo = LOCATION_INFO[location] || LOCATION_INFO.PARIS;
 
   const dateStr = appointmentDate.toLocaleDateString("fr-FR", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Europe/Paris",
   });
   const timeStr = appointmentDate.toLocaleTimeString("fr-FR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Paris",
   });
 
   const locationLine = isHome
     ? clientAddress
       ? `Notre technicien se déplacera à votre adresse :<br/><strong>${clientAddress}</strong>`
       : `Notre technicien se déplacera à votre domicile à l'heure indiquée.`
-    : ADDR
-    ? `Merci de vous présenter à l'atelier à l'heure indiquée avec votre Mac.<br/><strong>Adresse :</strong> ${ADDR}`
-    : `Merci de vous présenter à l'atelier à l'heure indiquée avec votre Mac.`;
+    : `Merci de vous présenter à l'atelier à l'heure indiquée avec votre Mac.<br/><strong>Adresse :</strong> ${locInfo.address}`;
 
   try {
     await transporter.sendMail({
@@ -331,7 +338,8 @@ export async function sendAppointmentConfirmationEmail(
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
           <p style="color: #86868b; font-size: 13px;">
             ${COMPANY}<br/>
-            ${ADDR || ""}
+            ${locInfo.address}<br/>
+            ${locInfo.phone}
           </p>
         </div>
       `,
@@ -393,9 +401,11 @@ export async function sendQuoteEmail(
   appointmentDate?: Date,
   isHome = false,
   homeAddress = "",
+  location = "PARIS",
 ) {
   const trackingUrl = `${APP_URL}/suivi/${token}`;
   const num = token.slice(0, 8).toUpperCase();
+  const locInfo = LOCATION_INFO[location] || LOCATION_INFO.PARIS;
 
   let rdvBlock = "";
   if (appointmentDate) {
@@ -409,7 +419,7 @@ export async function sendQuoteEmail(
       ? homeAddress
         ? `Notre technicien se déplacera à votre adresse :<br/><strong>${homeAddress}</strong>`
         : `Notre technicien se déplacera à votre domicile.`
-      : ADDR || "";
+      : locInfo.address;
     rdvBlock = `
       <div style="background: #f5f5f7; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
         <p style="color: #86868b; font-size: 12px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.8px;">Rendez-vous confirmé</p>
@@ -451,7 +461,8 @@ export async function sendQuoteEmail(
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
           <p style="color: #86868b; font-size: 13px;">
             ${COMPANY}<br/>
-            ${ADDR || ""}
+            ${locInfo.address}<br/>
+            ${locInfo.phone}
           </p>
         </div>
       `,
@@ -641,6 +652,61 @@ export async function sendPostalRepairEmail(
     return true;
   } catch (error) {
     console.error("Failed to send postal repair email:", error);
+    return false;
+  }
+}
+
+export async function sendTechnicianAppointmentNotification(
+  techEmail: string,
+  clientName: string,
+  clientPhone: string,
+  macModel: string,
+  faultType: string,
+  faultDescription: string,
+  appointmentDate: Date,
+  repairId: string,
+  isHome = false,
+  clientAddress = "",
+) {
+  const repairUrl = `${APP_URL}/admin/repairs/${repairId}`;
+  const dateStr = appointmentDate.toLocaleDateString("fr-FR", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Europe/Paris",
+  });
+  const timeStr = appointmentDate.toLocaleTimeString("fr-FR", {
+    hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris",
+  });
+  const locationLine = isHome
+    ? clientAddress ? `À domicile — ${clientAddress}` : `À domicile`
+    : `Atelier Nice — 12 rue François de Paule, 06300 Nice`;
+
+  try {
+    await transporter.sendMail({
+      from: FROM,
+      to: techEmail,
+      subject: `${COMPANY} — Nouveau RDV : ${clientName} (${macModel})`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1d1d1f;">
+          <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 8px;">Nouveau rendez-vous</h1>
+          <div style="background: #f5f5f7; border-radius: 12px; padding: 24px; margin: 24px 0;">
+            <p style="color: #424245; font-size: 15px; margin: 0 0 8px;"><strong>Client :</strong> ${clientName} — ${clientPhone}</p>
+            <p style="color: #424245; font-size: 15px; margin: 0 0 8px;"><strong>Mac :</strong> ${macModel}</p>
+            <p style="color: #424245; font-size: 15px; margin: 0 0 8px;"><strong>Panne :</strong> ${faultType}${faultDescription ? ` — ${faultDescription}` : ""}</p>
+            <p style="color: #424245; font-size: 15px; margin: 0 0 8px;"><strong>Lieu :</strong> ${locationLine}</p>
+            <p style="color: #0071e3; font-size: 17px; font-weight: 600; margin: 12px 0 0; text-transform: capitalize;">📅 ${dateStr} à ${timeStr}</p>
+          </div>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${repairUrl}" style="background-color: #0071e3; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 500;">
+              Voir le ticket
+            </a>
+          </div>
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
+          <p style="color: #86868b; font-size: 12px;">${COMPANY}</p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send technician appointment notification:", error);
     return false;
   }
 }

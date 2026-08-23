@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { after } from "next/server";
-import { sendTrackingEmail, sendNewRepairNotification, sendAppointmentConfirmationEmail, sendPostalRepairEmail, sendQuoteEmail } from "@/lib/email";
+import { sendTrackingEmail, sendNewRepairNotification, sendAppointmentConfirmationEmail, sendPostalRepairEmail, sendQuoteEmail, sendTechnicianAppointmentNotification } from "@/lib/email";
 import { generateQuotePDF } from "@/lib/quote-pdf";
 import { sendSMS } from "@/lib/sms";
 
@@ -280,7 +280,7 @@ export async function POST(request: Request) {
             });
             const atelierAddr = ADDRESSES[location] || ADDRESSES.PARIS;
             // Single email: devis + RDV info combined
-            await sendQuoteEmail(clientEmail, clientName, token, macModel, estimatedCost, quotePdf, apptDate, isHome, isHome ? fullClientAddress : atelierAddr);
+            await sendQuoteEmail(clientEmail, clientName, token, macModel, estimatedCost, quotePdf, apptDate, isHome, isHome ? fullClientAddress : atelierAddr, location);
           } catch (err) {
             console.error("Failed to send quote email:", err);
           }
@@ -290,10 +290,23 @@ export async function POST(request: Request) {
           try {
             await sendAppointmentConfirmationEmail(
               clientEmail, clientName, token, macModel, apptDate, isHome,
-              isHome ? fullClientAddress : atelierAddr,
+              isHome ? fullClientAddress : atelierAddr, location,
             );
           } catch (err) {
             console.error("Failed to send appointment confirmation:", err);
+          }
+        }
+
+        // Notify Nice technician (Antoine) for every Nice repair with an appointment
+        if (location === "NICE" && apptDate) {
+          try {
+            await sendTechnicianAppointmentNotification(
+              "macbrokeridf@gmail.com",
+              clientName, clientPhone, macModel, faultType, faultDescription,
+              apptDate, repair.id, isHome, fullClientAddress,
+            );
+          } catch (err) {
+            console.error("Failed to send technician notification:", err);
           }
         }
 

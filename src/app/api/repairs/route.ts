@@ -245,14 +245,8 @@ export async function POST(request: Request) {
           console.error("Failed to send postal repair email:", err);
         }
       } else {
-        // For LOCAL/HOME repairs: send tracking email
-        try {
-          await sendTrackingEmail(clientEmail, clientName, token, macModel);
-        } catch (err) {
-          console.error("Failed to send tracking email:", err);
-        }
-
         // For LOCAL/HOME: send one combined email (devis PDF + RDV confirmation if applicable)
+        // No separate tracking email — the combined email already has the "Voir mon dossier" link
         const isHome = repairType === "HOME";
         const apptDate = appointmentDate ? new Date(appointmentDate) : undefined;
 

@@ -193,6 +193,14 @@ export async function PUT(
         sendSMS(existing.clientPhone, smsBody).catch((e) =>
           console.error("SMS send failed:", e)
         );
+
+        // Send Google review request when repair is DONE
+        if (status === "DONE") {
+          sendSMS(
+            existing.clientPhone,
+            `Mac Place — Merci pour votre confiance ! Votre avis nous aide beaucoup, ca prend 30 secondes : https://g.page/r/CbXhF3Z6Q3tNEAE/review Repondez STOP pour vous desinscrire.`
+          ).catch((e) => console.error("Review SMS send failed:", e));
+        }
       }
     });
 

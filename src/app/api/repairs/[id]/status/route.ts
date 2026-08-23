@@ -55,10 +55,11 @@ export async function PUT(
 
     // Use finalCost if set, otherwise fall back to estimatedCost
     const invoiceCost = existing.finalCost > 0 ? existing.finalCost : existing.estimatedCost;
+    const isPostal = existing.repairType === "POSTAL";
 
-    // If transitioning to DONE and a cost is set: create Stripe payment link
+    // Stripe payment only for POSTAL repairs (LOCAL/HOME pay in person with TPE)
     let stripePaymentUrl: string | null = null;
-    if (status === "DONE" && invoiceCost > 0) {
+    if (status === "DONE" && isPostal && invoiceCost > 0) {
       try {
         stripePaymentUrl = await createPaymentSession({
           repairId: id,
@@ -72,7 +73,6 @@ export async function PUT(
         updateData.paymentLink = stripePaymentUrl;
       } catch (err) {
         console.error("[STRIPE ERROR] Payment session creation failed:", JSON.stringify(err));
-        // Continue without blocking the status change
       }
     }
 
@@ -108,8 +108,8 @@ export async function PUT(
     const clientName = `${existing.clientFirstName} ${existing.clientLastName}`;
 
     after(async () => {
-      if (status === "DONE" && stripePaymentUrl && invoiceCost > 0) {
-        // Send invoice email with PDF + Stripe payment link
+      if (status === "DONE" && invoiceCost > 0) {
+        // DONE: always send invoice PDF (with payment link for POSTAL, without for LOCAL/HOME)
         try {
           const invoicePdf = await generateInvoicePDF({
             id,
@@ -128,8 +128,6 @@ export async function PUT(
             createdAt: new Date(),
             token: existing.token,
           });
-
-          // Upload invoice PDF to Vercel Blob and save as RepairAttachment
           try {
             const { storedName, url: blobUrl } = await saveFile(invoicePdf, "application/pdf");
             const invoiceNumber = `FACT-${Date.now()}`;
@@ -147,19 +145,14 @@ export async function PUT(
           } catch (uploadErr) {
             console.error("Failed to upload invoice to Blob:", uploadErr);
           }
-
           await sendInvoiceEmail(
-            existing.clientEmail,
-            clientName,
-            existing.token,
-            existing.macModel,
-            invoiceCost,
-            stripePaymentUrl,
+            existing.clientEmail, clientName, existing.token,
+            existing.macModel, invoiceCost,
+            isPostal ? stripePaymentUrl : null,
             invoicePdf,
           );
         } catch (err) {
           console.error("Failed to send invoice email:", err);
-          // Fallback to generic status email
           try {
             await sendStatusUpdateEmail(
               existing.clientEmail, clientName, existing.token,
@@ -170,7 +163,7 @@ export async function PUT(
           }
         }
       } else {
-        // Send regular status update email for all other statuses
+        // Any other status: regular status email
         try {
           await sendStatusUpdateEmail(
             existing.clientEmail, clientName, existing.token,
@@ -181,25 +174,28 @@ export async function PUT(
         }
       }
 
-      // Send SMS notification (non-blocking, best-effort)
+      // SMS notifications
       if (existing.clientPhone) {
         const suiviUrl = `${APP_URL}/suivi/${existing.token}`;
-        let smsBody: string;
-        if (status === "DONE" && stripePaymentUrl) {
-          smsBody = `Mac Place — Votre ${existing.macModel} est réparé ! Payez et suivez votre dossier : ${suiviUrl} (Ne pas répondre)`;
-        } else {
-          smsBody = `Mac Place — ${statusIcon} ${statusLabel} — Suivez votre dossier : ${suiviUrl} (Ne pas répondre)`;
-        }
-        sendSMS(existing.clientPhone, smsBody).catch((e) =>
-          console.error("SMS send failed:", e)
-        );
 
-        // Send Google review request when repair is DONE
-        if (status === "DONE") {
-          sendSMS(
-            existing.clientPhone,
+        if (status === "DONE" && isPostal && stripePaymentUrl) {
+          // POSTAL: payment SMS + separate review SMS
+          sendSMS(existing.clientPhone,
+            `Mac Place — Votre ${existing.macModel} est réparé ! Payez et suivez votre dossier : ${suiviUrl} (Ne pas répondre)`
+          ).catch((e) => console.error("SMS send failed:", e));
+          sendSMS(existing.clientPhone,
             `Merci pour votre confiance ! Pouvez-vous laisser un avis, cela m'aiderait beaucoup 🙂\nBonne journée\nLucas\nhttps://g.page/r/CbXhF3Z6Q3tNEAE/review`
           ).catch((e) => console.error("Review SMS send failed:", e));
+        } else if (status === "DONE" && !isPostal) {
+          // LOCAL/HOME: single SMS combining notification + review request
+          sendSMS(existing.clientPhone,
+            `Mac Place — Votre ${existing.macModel} est prêt ! Merci pour votre confiance, pouvez-vous laisser un avis, cela m'aiderait beaucoup 🙂\nBonne journée\nLucas\nhttps://g.page/r/CbXhF3Z6Q3tNEAE/review`
+          ).catch((e) => console.error("SMS send failed:", e));
+        } else {
+          // Other status changes
+          sendSMS(existing.clientPhone,
+            `Mac Place — ${statusIcon} ${statusLabel} — Suivez votre dossier : ${suiviUrl} (Ne pas répondre)`
+          ).catch((e) => console.error("SMS send failed:", e));
         }
       }
     });

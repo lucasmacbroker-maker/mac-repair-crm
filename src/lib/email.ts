@@ -400,10 +400,10 @@ export async function sendQuoteEmail(
   let rdvBlock = "";
   if (appointmentDate) {
     const dateStr = appointmentDate.toLocaleDateString("fr-FR", {
-      weekday: "long", year: "numeric", month: "long", day: "numeric",
+      weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Europe/Paris",
     });
     const timeStr = appointmentDate.toLocaleTimeString("fr-FR", {
-      hour: "2-digit", minute: "2-digit",
+      hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris",
     });
     const addrLine = isHome
       ? homeAddress
@@ -469,17 +469,32 @@ export async function sendInvoiceEmail(
   token: string,
   macModel: string,
   finalCost: number,
-  paymentUrl: string,
+  paymentUrl: string | null,
   invoicePdfBuffer: Buffer,
 ) {
   const trackingUrl = `${APP_URL}/suivi/${token}`;
   const num = token.slice(0, 8).toUpperCase();
 
+  const paymentBlock = paymentUrl ? `
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
+      <p style="color: #166534; font-size: 14px; margin: 0 0 4px;">Montant à régler</p>
+      <p style="color: #166534; font-size: 32px; font-weight: 700; margin: 0 0 16px;">${finalCost.toFixed(2).replace(".", ",")} €&nbsp;TTC</p>
+      <a href="${paymentUrl}" style="background-color: #16a34a; color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+        Payer maintenant
+      </a>
+    </div>` : `
+    <div style="background: #f5f5f7; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; text-align: center;">
+      <p style="color: #555; font-size: 13px; margin: 0 0 4px;">Montant réglé</p>
+      <p style="color: #1d1d1f; font-size: 32px; font-weight: 700; margin: 0;">${finalCost.toFixed(2).replace(".", ",")} €&nbsp;TTC</p>
+    </div>`;
+
   try {
     await transporter.sendMail({
       from: FROM,
       to: email,
-      subject: `${COMPANY} — Votre Mac est réparé — Facture et lien de paiement`,
+      subject: paymentUrl
+        ? `${COMPANY} — Votre Mac est réparé — Facture et lien de paiement`
+        : `${COMPANY} — Votre Mac est réparé — Facture`,
       attachments: [
         {
           filename: `Facture-MacPlace-FACT-${num}.pdf`,
@@ -494,26 +509,17 @@ export async function sendInvoiceEmail(
             Bonne nouvelle ! La réparation de votre <strong>${macModel}</strong> est terminée.<br/>
             Veuillez trouver ci-joint votre <strong>facture</strong>.
           </p>
-
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
-            <p style="color: #166534; font-size: 14px; margin: 0 0 4px;">Montant à régler</p>
-            <p style="color: #166534; font-size: 32px; font-weight: 700; margin: 0 0 16px;">${finalCost.toFixed(2).replace(".", ",")} €&nbsp;TTC</p>
-            <a href="${paymentUrl}" style="background-color: #16a34a; color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
-              💳&nbsp; Payer maintenant
-            </a>
-          </div>
-
+          ${paymentBlock}
           <p style="color: #424245; font-size: 14px; line-height: 1.6; margin-bottom: 8px;">
-            Vous pouvez également suivre l'avancement de votre dossier sur votre espace de suivi :
+            Suivez votre dossier en ligne :
           </p>
           <div style="text-align: center; margin-bottom: 28px;">
             <a href="${trackingUrl}" style="color: #0071e3; font-size: 14px;">${trackingUrl}</a>
           </div>
-
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
           <p style="color: #86868b; font-size: 12px;">
-            ${COMPANY} — 5, rue Paul Vaillant Couturier, 94700 Maisons Alfort<br/>
-            07 82 71 21 23 — contact@macplace.fr
+            ${COMPANY}<br/>
+            ${ADDR || ""}
           </p>
         </div>
       `,

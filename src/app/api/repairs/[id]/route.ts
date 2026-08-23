@@ -212,10 +212,10 @@ export async function PUT(
         const apptDate = repair.appointmentDate;
 
         const dateStr = apptDate.toLocaleDateString("fr-FR", {
-          weekday: "long", year: "numeric", month: "long", day: "numeric",
+          weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Europe/Paris",
         });
         const timeStr = apptDate.toLocaleTimeString("fr-FR", {
-          hour: "2-digit", minute: "2-digit",
+          hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris",
         });
 
         try {

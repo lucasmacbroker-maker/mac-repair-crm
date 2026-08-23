@@ -297,8 +297,8 @@ export async function POST(request: Request) {
         // SMS confirmation for any repair with a date
         if (apptDate) {
           const addr = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "";
-          const dateStr = apptDate.toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-          const timeStr = apptDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+          const dateStr = apptDate.toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Europe/Paris" });
+          const timeStr = apptDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
           const locationSMS = isHome
             ? fullClientAddress ? `Adresse d'intervention : ${fullClientAddress}` : `Notre technicien se déplacera à votre adresse.`
             : `Adresse atelier : ${addr}`;

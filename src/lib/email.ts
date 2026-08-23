@@ -392,6 +392,7 @@ export async function sendQuoteEmail(
   quotePdfBuffer: Buffer,
   appointmentDate?: Date,
   isHome = false,
+  homeAddress = "",
 ) {
   const trackingUrl = `${APP_URL}/suivi/${token}`;
   const num = token.slice(0, 8).toUpperCase();
@@ -405,7 +406,9 @@ export async function sendQuoteEmail(
       hour: "2-digit", minute: "2-digit",
     });
     const addrLine = isHome
-      ? `Notre technicien se déplacera à votre domicile.`
+      ? homeAddress
+        ? `Notre technicien se déplacera à votre adresse :<br/><strong>${homeAddress}</strong>`
+        : `Notre technicien se déplacera à votre domicile.`
       : ADDR || "";
     rdvBlock = `
       <div style="background: #f5f5f7; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">

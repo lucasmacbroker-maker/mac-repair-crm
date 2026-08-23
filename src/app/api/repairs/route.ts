@@ -256,7 +256,9 @@ export async function POST(request: Request) {
         const isHome = repairType === "HOME";
         const apptDate = appointmentDate ? new Date(appointmentDate) : undefined;
 
-        if (repairType === "LOCAL" && estimatedCost > 0) {
+        const fullClientAddress = [clientAddress, clientPostalCode, clientCity].filter(Boolean).join(", ");
+
+        if ((repairType === "LOCAL" || repairType === "HOME") && estimatedCost > 0) {
           try {
             const quotePdf = await generateQuotePDF({
               id: repair.id,
@@ -275,17 +277,17 @@ export async function POST(request: Request) {
               createdAt: repair.createdAt,
               token,
             });
-            // Single email: devis + RDV info combined
-            await sendQuoteEmail(clientEmail, clientName, token, macModel, estimatedCost, quotePdf, apptDate, isHome);
+            // Single email: devis + RDV info combined (client address for HOME)
+            await sendQuoteEmail(clientEmail, clientName, token, macModel, estimatedCost, quotePdf, apptDate, isHome, isHome ? fullClientAddress : "");
           } catch (err) {
-            console.error("Failed to send LOCAL quote email:", err);
+            console.error("Failed to send quote email:", err);
           }
         } else if (apptDate) {
-          // HOME repair or LOCAL without price: send appointment confirmation email only
+          // LOCAL/HOME without price: send appointment confirmation email only
           try {
             await sendAppointmentConfirmationEmail(
               clientEmail, clientName, token, macModel, apptDate, isHome,
-              isHome ? [clientAddress, clientPostalCode, clientCity].filter(Boolean).join(", ") : "",
+              isHome ? fullClientAddress : "",
             );
           } catch (err) {
             console.error("Failed to send appointment confirmation:", err);
@@ -297,7 +299,9 @@ export async function POST(request: Request) {
           const addr = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "";
           const dateStr = apptDate.toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
           const timeStr = apptDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-          const locationSMS = isHome ? `Notre technicien se déplacera à votre adresse.` : `Adresse atelier : ${addr}`;
+          const locationSMS = isHome
+            ? fullClientAddress ? `Adresse d'intervention : ${fullClientAddress}` : `Notre technicien se déplacera à votre adresse.`
+            : `Adresse atelier : ${addr}`;
           try {
             await sendSMS(clientPhone, `Mac Place — RDV confirmé pour votre ${macModel} le ${dateStr} à ${timeStr}. ${locationSMS} Répondez STOP pour vous désinscrire.`);
           } catch (err) {

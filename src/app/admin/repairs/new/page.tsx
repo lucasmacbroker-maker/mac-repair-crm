@@ -31,6 +31,7 @@ export default function NewRepairPage() {
   // Client info
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -99,6 +100,7 @@ export default function NewRepairPage() {
       const fd = new FormData();
       fd.append("clientFirstName", firstName.trim());
       fd.append("clientLastName", lastName.trim());
+      fd.append("clientCompany", company.trim());
       fd.append("clientEmail", email.trim());
       fd.append("clientPhone", phone.trim());
       fd.append("clientAddress", address.trim());
@@ -240,6 +242,12 @@ export default function NewRepairPage() {
               onChange={(e) => setLastName(e.target.value)}
               error={errors.lastName}
               required
+            />
+            <Input
+              label="Nom d'entreprise"
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              placeholder="Optionnel"
             />
             <Input
               label="Email"

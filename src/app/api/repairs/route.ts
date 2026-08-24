@@ -120,6 +120,7 @@ export async function POST(request: Request) {
 
     const clientFirstName = g("clientFirstName");
     const clientLastName  = g("clientLastName");
+    const clientCompany   = g("clientCompany");
     const clientEmail     = g("clientEmail");
     const clientPhone     = g("clientPhone");
     const clientAddress   = g("clientAddress");
@@ -168,6 +169,7 @@ export async function POST(request: Request) {
         token,
         clientFirstName,
         clientLastName,
+        clientCompany: clientCompany || "",
         clientEmail,
         clientPhone,
         clientAddress: clientAddress || "",

@@ -109,6 +109,7 @@ export async function PUT(
     const allowedFields = [
       "clientFirstName",
       "clientLastName",
+      "clientCompany",
       "clientEmail",
       "clientPhone",
       "clientAddress",

@@ -392,7 +392,7 @@ export default function NewRepairPage() {
             </div>
           </div>
 
-          {(repairType === "LOCAL" || repairType === "HOME") && (
+          {repairType === "LOCAL" && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Atelier</label>
               <div className="grid grid-cols-2 gap-3">

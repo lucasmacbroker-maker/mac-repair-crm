@@ -108,7 +108,7 @@ export async function PUT(
     const clientName = `${existing.clientFirstName} ${existing.clientLastName}`;
 
     after(async () => {
-      if (status === "DONE" && invoiceCost > 0) {
+      if (status === "DONE" && (invoiceCost > 0 || !isPostal)) {
         // DONE: always send invoice PDF (with payment link for POSTAL, without for LOCAL/HOME)
         try {
           const invoicePdf = await generateInvoicePDF({

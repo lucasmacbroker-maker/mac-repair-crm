@@ -157,6 +157,15 @@ export default function RepairDetailPage() {
   const [sendingDocuments, setSendingDocuments] = useState(false);
   const [bordereauFile, setBordereauFile] = useState<File | null>(null);
 
+  // Packlink modal (inbound label)
+  const [showPacklinkModal, setShowPacklinkModal] = useState(false);
+  const [packlinkService, setPacklinkService] = useState("ACI_CHRONOPOST_18_S2H");
+  const [packlinkWeight, setPacklinkWeight] = useState("2");
+  const [packlinkContentValue, setPacklinkContentValue] = useState("500");
+  const [creatingShipment, setCreatingShipment] = useState(false);
+  const [shipmentRef, setShipmentRef] = useState<string | null>(null);
+  const [labelLoading, setLabelLoading] = useState(false);
+
   // Return shipment
   const [sendingReturn, setSendingReturn] = useState(false);
   const [returnBordereauFile, setReturnBordereauFile] = useState<File | null>(null);
@@ -423,6 +432,78 @@ export default function RepairDetailPage() {
       fetchRepair();
     } catch {
       toast.error("Erreur de connexion");
+    }
+  };
+
+  const handleCreateShipment = async () => {
+    if (!repair) return;
+    setCreatingShipment(true);
+    setShipmentRef(null);
+    try {
+      const res = await fetch("/api/packlink/shipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: repair.clientFirstName,
+          clientSurname: repair.clientLastName,
+          clientPhone: repair.clientPhone,
+          clientEmail: repair.clientEmail,
+          clientStreet: repair.clientAddress,
+          clientCity: repair.clientCity,
+          clientZip: repair.clientPostalCode,
+          weight: parseFloat(packlinkWeight) || 2,
+          contentValue: parseFloat(packlinkContentValue) || 500,
+          serviceId: packlinkService,
+          direction: "inbound",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Erreur lors de la création du bordereau");
+        return;
+      }
+      const ref = (data.id || data.reference || data.shipment_id) as string | undefined;
+      if (ref) {
+        setShipmentRef(ref);
+        toast.success("Bordereau créé ! Téléchargez l'étiquette.");
+      } else {
+        toast.error("Réponse Packlink inattendue — vérifiez votre tableau de bord Packlink");
+        console.error("Packlink response:", data);
+      }
+    } catch {
+      toast.error("Erreur de connexion");
+    } finally {
+      setCreatingShipment(false);
+    }
+  };
+
+  const handleDownloadLabel = async () => {
+    if (!shipmentRef) return;
+    setLabelLoading(true);
+    try {
+      const res = await fetch(`/api/packlink/shipment?ref=${encodeURIComponent(shipmentRef)}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if ((data as { pending?: boolean }).pending) {
+          toast.error("L'étiquette n'est pas encore prête — réessayez dans quelques secondes");
+        } else {
+          toast.error("Impossible de télécharger l'étiquette");
+        }
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bordereau-${shipmentRef}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Erreur de téléchargement");
+    } finally {
+      setLabelLoading(false);
     }
   };
 
@@ -697,15 +778,14 @@ export default function RepairDetailPage() {
               <div className="pt-2 border-t border-gray-100">
                 <p className="text-xs text-[#86868b] mb-2">Adresse de livraison Mac Place :</p>
                 <p className="text-xs text-[#424245] font-mono mb-3">5, rue Paul Vaillant Couturier<br/>94700 Maisons Alfort</p>
-                <a
-                  href={`https://pro.packlink.fr/private/shipments/new`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => { setShipmentRef(null); setShowPacklinkModal(true); }}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
                   style={{ backgroundColor: "#e8611a" }}
                 >
-                  📦 Créer bordereau Packlink
-                </a>
+                  📦 Créer bordereau Chronopost
+                </button>
               </div>
             )}
             {repair.paymentLink && (
@@ -1218,6 +1298,89 @@ export default function RepairDetailPage() {
           </div>
         )}
       </Card>
+
+      {/* Packlink modal */}
+      <Modal isOpen={showPacklinkModal} onClose={() => setShowPacklinkModal(false)} title="📦 Créer le bordereau Chronopost">
+        <div className="space-y-4">
+          <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-sm text-orange-800">
+            Le bordereau sera créé pour que <strong>{repair?.clientFirstName} {repair?.clientLastName}</strong> envoie son Mac depuis son adresse vers Mac Place.
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[#86868b] mb-1.5">Service Chronopost</label>
+            <select
+              value={packlinkService}
+              onChange={(e) => setPacklinkService(e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
+            >
+              <option value="ACI_CHRONOPOST_18_S2H">Chronopost 18h — domicile (12.10€)</option>
+              <option value="ACI_CHRONOPOST_SHOP2SHOP_S2S">Chronopost Shop2Shop — point relais (4.56€)</option>
+              <option value="ACI_CHRONOPOST_RELAIS_13_S2S">Chrono Relais 13h — express (9.53€)</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-[#86868b] mb-1.5">Poids (kg)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="30"
+                value={packlinkWeight}
+                onChange={(e) => setPacklinkWeight(e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[#86868b] mb-1.5">Valeur déclarée (€)</label>
+              <input
+                type="number"
+                min="0"
+                value={packlinkContentValue}
+                onChange={(e) => setPacklinkContentValue(e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
+              />
+            </div>
+          </div>
+
+          <div className="text-xs text-[#86868b] bg-gray-50 rounded-lg p-3 space-y-1">
+            <p><span className="font-medium">Dimensions :</span> 35 × 25 × 7 cm (MacBook standard)</p>
+            <p><span className="font-medium">Expéditeur :</span> {repair?.clientFirstName} {repair?.clientLastName}, {repair?.clientAddress}, {repair?.clientPostalCode} {repair?.clientCity}</p>
+            <p><span className="font-medium">Destinataire :</span> Mac Place, 5 rue Paul Vaillant Couturier, 94700 Maisons Alfort</p>
+          </div>
+
+          {shipmentRef && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <p className="text-sm font-medium text-green-800 mb-2">✓ Bordereau créé — ref : <span className="font-mono">{shipmentRef}</span></p>
+              <button
+                type="button"
+                onClick={handleDownloadLabel}
+                disabled={labelLoading}
+                className="text-sm font-medium text-green-700 underline disabled:opacity-50"
+              >
+                {labelLoading ? "Téléchargement..." : "⬇ Télécharger l'étiquette PDF"}
+              </button>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowPacklinkModal(false)}>
+              Fermer
+            </Button>
+            {!shipmentRef && (
+              <Button
+                variant="primary"
+                size="sm"
+                loading={creatingShipment}
+                onClick={handleCreateShipment}
+              >
+                Créer le bordereau
+              </Button>
+            )}
+          </div>
+        </div>
+      </Modal>
 
       {/* Part modal */}
       <Modal isOpen={showPartModal} onClose={() => setShowPartModal(false)} title="Ajouter une piece">

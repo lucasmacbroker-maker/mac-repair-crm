@@ -1344,16 +1344,28 @@ export default function RepairDetailPage() {
           </div>
 
           {shipmentRef && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <p className="text-sm font-medium text-green-800 mb-2">✓ Bordereau créé — ref : <span className="font-mono">{shipmentRef}</span></p>
-              <button
-                type="button"
-                onClick={handleDownloadLabel}
-                disabled={labelLoading}
-                className="text-sm font-medium text-green-700 underline disabled:opacity-50"
-              >
-                {labelLoading ? "Téléchargement..." : "⬇ Télécharger l'étiquette PDF"}
-              </button>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2">
+              <p className="text-sm font-medium text-orange-800">✓ Bordereau créé — réf. <span className="font-mono">{shipmentRef}</span></p>
+              <p className="text-xs text-orange-700">Payez sur Packlink Pro, puis téléchargez l&apos;étiquette.</p>
+              <div className="flex gap-2 flex-wrap">
+                <a
+                  href={`https://pro.packlink.fr/private/shipments/${shipmentRef}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-white px-3 py-1.5 rounded-lg"
+                  style={{ backgroundColor: "#e8611a" }}
+                >
+                  💳 Payer sur Packlink Pro
+                </a>
+                <button
+                  type="button"
+                  onClick={handleDownloadLabel}
+                  disabled={labelLoading}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 border border-orange-300 px-3 py-1.5 rounded-lg disabled:opacity-50 bg-white"
+                >
+                  {labelLoading ? "Téléchargement..." : "⬇ Télécharger l'étiquette"}
+                </button>
+              </div>
             </div>
           )}
 

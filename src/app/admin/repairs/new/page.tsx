@@ -226,7 +226,7 @@ export default function NewRepairPage() {
       const ref = ((data as Record<string, unknown>).id || (data as Record<string, unknown>).reference) as string | undefined;
       if (ref) {
         setBordereauRef(ref);
-        toast.success("Bordereau créé ! Téléchargez l'étiquette ci-dessous.");
+        toast.success("Bordereau créé ! Payez sur Packlink Pro pour obtenir l'étiquette.");
       } else {
         toast.error("Réponse Packlink inattendue");
       }
@@ -545,16 +545,28 @@ export default function NewRepairPage() {
                       {creatingBordereau ? "Création en cours..." : "📦 Créer le bordereau Chrono Relais 13"}
                     </button>
                     {bordereauRef && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <p className="text-xs text-green-700 mb-2">✓ Bordereau créé — réf. <span className="font-mono font-medium">{bordereauRef}</span></p>
-                        <button
-                          type="button"
-                          onClick={handleDownloadBordereauLabel}
-                          disabled={downloadingLabel}
-                          className="text-xs font-medium text-green-700 underline disabled:opacity-50"
-                        >
-                          {downloadingLabel ? "Téléchargement..." : "⬇ Télécharger et joindre l'étiquette PDF"}
-                        </button>
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2">
+                        <p className="text-xs text-orange-800 font-medium">✓ Bordereau créé — réf. <span className="font-mono">{bordereauRef}</span></p>
+                        <p className="text-xs text-orange-700">Étape 2 : payez sur Packlink Pro, puis téléchargez l&apos;étiquette.</p>
+                        <div className="flex gap-2 flex-wrap">
+                          <a
+                            href={`https://pro.packlink.fr/private/shipments/${bordereauRef}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-white px-3 py-1.5 rounded-lg"
+                            style={{ backgroundColor: "#e8611a" }}
+                          >
+                            💳 Payer sur Packlink Pro
+                          </a>
+                          <button
+                            type="button"
+                            onClick={handleDownloadBordereauLabel}
+                            disabled={downloadingLabel}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 border border-orange-300 px-3 py-1.5 rounded-lg disabled:opacity-50 bg-white"
+                          >
+                            {downloadingLabel ? "Téléchargement..." : "⬇ Télécharger l'étiquette"}
+                          </button>
+                        </div>
                       </div>
                     )}
                     {bordereauFile && (

@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     city: clientCity || "",
     zip: clientZip || "",
     country: "FR",
-    phone: (clientPhone || "").replace(/[\s.()\-]/g, ""),
+    phone: (clientPhone || "").replace(/[\s.()\-]/g, "").replace(/^0/, "33"),
     email: clientEmail || "",
   };
 
@@ -51,8 +51,9 @@ export async function POST(request: Request) {
     additional_data: {},
     from: clientAddress,
     to: {
-      name: "Mac Place",
-      surname: "",
+      name: "Mac",
+      surname: "Place",
+      company: "Mac Place",
       street1: DESTINATION_RELAY.street1,
       city: DESTINATION_RELAY.city,
       zip: DESTINATION_RELAY.zip,
@@ -62,7 +63,14 @@ export async function POST(request: Request) {
     },
     packages: [{ weight, width: 35, height: 7, length: 25 }],
     carrier_product_id: "ACI_CHRONOPOST_RELAIS_13_S2S",
-    service_point_to: DESTINATION_RELAY,
+    service_point_to: {
+      id: DESTINATION_RELAY.id,
+      name: DESTINATION_RELAY.name,
+      street1: DESTINATION_RELAY.street1,
+      city: DESTINATION_RELAY.city,
+      zip: DESTINATION_RELAY.zip,
+      country: DESTINATION_RELAY.country,
+    },
     content: "Ordinateur portable Mac - réparation",
     content_value: contentValue,
     source: "PR",

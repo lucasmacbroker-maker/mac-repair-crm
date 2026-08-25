@@ -60,6 +60,9 @@ export default function NewRepairPage() {
   const [bordereauFile, setBordereauFile] = useState<File | null>(null);
   const [extractingTracking, setExtractingTracking] = useState(false);
   const [trackingAutoFilled, setTrackingAutoFilled] = useState(false);
+  const [creatingBordereau, setCreatingBordereau] = useState(false);
+  const [bordereauRef, setBordereauRef] = useState<string | null>(null);
+  const [downloadingLabel, setDownloadingLabel] = useState(false);
 
   // Notes
   const [internalNote, setInternalNote] = useState("");
@@ -189,6 +192,82 @@ export default function NewRepairPage() {
           if (!city) setCity(names[0]);
         }
       } catch { /* ignore */ }
+    }
+  };
+
+  const handleCreateBordereau = async () => {
+    if (!firstName && !lastName) {
+      toast.error("Renseignez d'abord le nom et l'adresse du client");
+      return;
+    }
+    setCreatingBordereau(true);
+    setBordereauRef(null);
+    try {
+      const res = await fetch("/api/packlink/shipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: firstName,
+          clientSurname: lastName,
+          clientPhone: phone,
+          clientEmail: email,
+          clientStreet: address,
+          clientCity: city,
+          clientZip: postalCode,
+          weight: 2,
+          contentValue: 500,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error((data as { error?: string }).error || "Erreur Packlink");
+        return;
+      }
+      const ref = ((data as Record<string, unknown>).id || (data as Record<string, unknown>).reference) as string | undefined;
+      if (ref) {
+        setBordereauRef(ref);
+        toast.success("Bordereau créé ! Téléchargez l'étiquette ci-dessous.");
+      } else {
+        toast.error("Réponse Packlink inattendue");
+      }
+    } catch {
+      toast.error("Erreur de connexion");
+    } finally {
+      setCreatingBordereau(false);
+    }
+  };
+
+  const handleDownloadBordereauLabel = async () => {
+    if (!bordereauRef) return;
+    setDownloadingLabel(true);
+    try {
+      const res = await fetch(`/api/packlink/shipment?ref=${encodeURIComponent(bordereauRef)}`);
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        if ((d as { pending?: boolean }).pending) {
+          toast.error("Étiquette pas encore prête, réessayez dans quelques secondes");
+        } else {
+          toast.error("Impossible de télécharger l'étiquette");
+        }
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bordereau-${bordereauRef}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      // Convert blob to File so it's auto-attached to the ticket email
+      const file = new File([blob], `bordereau-${bordereauRef}.pdf`, { type: "application/pdf" });
+      setBordereauFile(file);
+      toast.success("Étiquette téléchargée et jointe au ticket ✓");
+    } catch {
+      toast.error("Erreur de téléchargement");
+    } finally {
+      setDownloadingLabel(false);
     }
   };
 
@@ -452,21 +531,48 @@ export default function NewRepairPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#1d1d1f] mb-1.5">
-                    Bordereau Packlink <span className="text-[#86868b] font-normal">(PDF)</span>
+                  <label className="block text-sm font-medium text-[#1d1d1f] mb-2">
+                    Bordereau Chronopost <span className="text-[#86868b] font-normal">(Relais 13h)</span>
                   </label>
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={(e) => handleBordereauChange(e.target.files?.[0] || null)}
-                    className="block w-full text-sm text-[#424245] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#f5f5f7] file:text-[#1d1d1f] hover:file:bg-[#e8e8ed] cursor-pointer border border-gray-200 rounded-lg p-1.5"
-                  />
-                  {bordereauFile && (
-                    <p className="text-xs text-green-600 mt-1.5">✓ {bordereauFile.name}</p>
-                  )}
-                  {!bordereauFile && (
-                    <p className="text-xs text-[#86868b] mt-1.5">Le devis PDF sera généré automatiquement. Si vous joignez le bordereau, les deux seront envoyés dans un seul email au client.</p>
-                  )}
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={handleCreateBordereau}
+                      disabled={creatingBordereau}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
+                      style={{ backgroundColor: "#e8611a" }}
+                    >
+                      {creatingBordereau ? "Création en cours..." : "📦 Créer le bordereau Chrono Relais 13"}
+                    </button>
+                    {bordereauRef && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-xs text-green-700 mb-2">✓ Bordereau créé — réf. <span className="font-mono font-medium">{bordereauRef}</span></p>
+                        <button
+                          type="button"
+                          onClick={handleDownloadBordereauLabel}
+                          disabled={downloadingLabel}
+                          className="text-xs font-medium text-green-700 underline disabled:opacity-50"
+                        >
+                          {downloadingLabel ? "Téléchargement..." : "⬇ Télécharger et joindre l'étiquette PDF"}
+                        </button>
+                      </div>
+                    )}
+                    {bordereauFile && (
+                      <p className="text-xs text-green-600">✓ {bordereauFile.name} — sera joint à l'email client</p>
+                    )}
+                    {!bordereauRef && !bordereauFile && (
+                      <p className="text-xs text-[#86868b]">Le devis PDF est généré automatiquement. Le bordereau sera joint à l&apos;email si créé ici.</p>
+                    )}
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-xs text-[#86868b]">ou joindre manuellement :</span>
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => handleBordereauChange(e.target.files?.[0] || null)}
+                        className="text-xs text-[#424245] file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-medium file:bg-[#f5f5f7] file:text-[#1d1d1f] hover:file:bg-[#e8e8ed] cursor-pointer"
+                      />
+                    </div>
+                  </div>
                 </div>
               </>
             )}

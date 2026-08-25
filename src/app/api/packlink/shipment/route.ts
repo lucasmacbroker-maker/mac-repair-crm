@@ -4,17 +4,17 @@ import { getCurrentUser } from "@/lib/auth";
 const PACKLINK_API = "https://api.packlink.com/v1";
 const API_KEY = process.env.PACKLINK_API_KEY || "";
 
-const ATELIER = {
-  name: "Mac Place",
-  surname: "",
-  company: "Mac Place",
-  street1: "5, rue Paul Vaillant Couturier",
-  city: "Maisons Alfort",
-  zip: "94700",
+// Fixed destination relay: Consigne Franprix Alfortville, 90 Rue Paul Vaillant Couturier
+const DESTINATION_RELAY = {
+  id: "3408X",
+  name: "Consigne Franprix Alfortville",
+  street1: "90 Rue Paul Vaillant Couturier",
+  city: "Alfortville",
+  zip: "94140",
   country: "FR",
-  phone: "07 82 71 21 23",
-  email: "contact@macplace.fr",
 };
+
+const ATELIER_PHONE = "0782712123";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -30,15 +30,8 @@ export async function POST(request: Request) {
     clientCity,
     clientZip,
     weight = 2,
-    width = 35,
-    height = 7,
-    length = 25,
-    serviceId = "ACI_CHRONOPOST_18_S2H",
     contentValue = 500,
-    direction = "inbound", // inbound = client→atelier, outbound = atelier→client
   } = body;
-
-  const ATELIER_PHONE = "0782712123";
 
   const clientAddress = {
     name: clientName || "",
@@ -47,20 +40,29 @@ export async function POST(request: Request) {
     city: clientCity || "",
     zip: clientZip || "",
     country: "FR",
-    phone: (clientPhone || "").replace(/[\s.]/g, ""),
+    phone: (clientPhone || "").replace(/[\s.()\-]/g, ""),
     email: clientEmail || "",
   };
 
-  const atelierAddr = { ...ATELIER, phone: ATELIER_PHONE };
-  const fromAddr = direction === "inbound" ? clientAddress : atelierAddr;
-  const toAddr   = direction === "inbound" ? atelierAddr   : clientAddress;
-
+  // For Chrono Relais 13 (relay→relay):
+  // - from: client's address (they drop off at nearest Chronopost relay)
+  // - to: our fixed relay point (Consigne Franprix Alfortville)
   const payload = {
     additional_data: {},
-    from: fromAddr,
-    to: toAddr,
-    packages: [{ weight, width, height, length }],
-    carrier_product_id: serviceId,
+    from: clientAddress,
+    to: {
+      name: "Mac Place",
+      surname: "",
+      street1: DESTINATION_RELAY.street1,
+      city: DESTINATION_RELAY.city,
+      zip: DESTINATION_RELAY.zip,
+      country: "FR",
+      phone: ATELIER_PHONE,
+      email: "contact@macplace.fr",
+    },
+    packages: [{ weight, width: 35, height: 7, length: 25 }],
+    carrier_product_id: "ACI_CHRONOPOST_RELAIS_13_S2S",
+    service_point_to: DESTINATION_RELAY,
     content: "Ordinateur portable Mac - réparation",
     content_value: contentValue,
     source: "PR",
@@ -84,14 +86,14 @@ export async function POST(request: Request) {
 
   if (!res.ok) {
     const messages = (data as { messages?: string[] }).messages;
-    const msg = messages?.join(", ") || (data as { message?: string }).message || text;
+    const msg = messages?.join(", ") || (data as { message?: string }).message || JSON.stringify(data).slice(0, 300);
     return NextResponse.json({ error: msg || "Erreur Packlink", details: data }, { status: res.status });
   }
 
   return NextResponse.json(data);
 }
 
-// GET /api/packlink/shipment?ref=XXX  →  download label PDF (proxy to avoid CORS + expose key)
+// GET /api/packlink/shipment?ref=XXX  →  download label PDF
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
@@ -111,13 +113,10 @@ export async function GET(request: Request) {
 
   const data = await res.json() as { labels?: string[] };
 
-  // labels is an array of base64-encoded PDFs
   if (!data.labels || data.labels.length === 0) {
-    // Sometimes labels aren't ready yet — return the reference so UI can poll
     return NextResponse.json({ pending: true, ref });
   }
 
-  // Decode first label and stream as PDF
   const pdfBuffer = Buffer.from(data.labels[0], "base64");
   return new Response(pdfBuffer, {
     headers: {

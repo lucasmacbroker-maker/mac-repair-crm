@@ -1308,17 +1308,8 @@ export default function RepairDetailPage() {
             Le bordereau sera créé pour que <strong>{repair?.clientFirstName} {repair?.clientLastName}</strong> envoie son Mac depuis son adresse vers Mac Place.
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-[#86868b] mb-1.5">Service Chronopost</label>
-            <select
-              value={packlinkService}
-              onChange={(e) => setPacklinkService(e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]"
-            >
-              <option value="ACI_CHRONOPOST_18_S2H">Chronopost 18h — domicile (12.10€)</option>
-              <option value="ACI_CHRONOPOST_SHOP2SHOP_S2S">Chronopost Shop2Shop — point relais (4.56€)</option>
-              <option value="ACI_CHRONOPOST_RELAIS_13_S2S">Chrono Relais 13h — express (9.53€)</option>
-            </select>
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800">
+            <strong>Chrono Relais 13h</strong> — 9.53€ · Client dépose au relais Chronopost le plus proche · Livraison à <strong>Consigne Franprix Alfortville</strong> (90 Rue Paul Vaillant Couturier)
           </div>
 
           <div className="grid grid-cols-2 gap-4">

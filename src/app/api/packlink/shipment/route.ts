@@ -38,6 +38,8 @@ export async function POST(request: Request) {
     direction = "inbound", // inbound = client→atelier, outbound = atelier→client
   } = body;
 
+  const ATELIER_PHONE = "0782712123";
+
   const clientAddress = {
     name: clientName || "",
     surname: clientSurname || "",
@@ -45,22 +47,26 @@ export async function POST(request: Request) {
     city: clientCity || "",
     zip: clientZip || "",
     country: "FR",
-    phone: (clientPhone || "").replace(/\s/g, ""),
+    phone: (clientPhone || "").replace(/[\s.]/g, ""),
     email: clientEmail || "",
   };
 
-  const from = direction === "inbound" ? clientAddress : ATELIER;
-  const to   = direction === "inbound" ? ATELIER       : clientAddress;
+  const atelierAddr = { ...ATELIER, phone: ATELIER_PHONE };
+  const fromAddr = direction === "inbound" ? clientAddress : atelierAddr;
+  const toAddr   = direction === "inbound" ? atelierAddr   : clientAddress;
 
   const payload = {
-    from,
-    to,
+    additional_data: {},
+    from: fromAddr,
+    to: toAddr,
     packages: [{ weight, width, height, length }],
-    service_id: serviceId,
+    carrier_product_id: serviceId,
     content: "Ordinateur portable Mac - réparation",
     content_value: contentValue,
     source: "PR",
   };
+
+  console.log("[Packlink] POST payload:", JSON.stringify(payload));
 
   const res = await fetch(`${PACKLINK_API}/shipments`, {
     method: "POST",
@@ -72,12 +78,14 @@ export async function POST(request: Request) {
   });
 
   const text = await res.text();
+  console.log("[Packlink] response status:", res.status, "body:", text);
   let data: Record<string, unknown>;
   try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
   if (!res.ok) {
-    console.error("Packlink error:", res.status, text);
-    return NextResponse.json({ error: "Erreur Packlink", details: data }, { status: res.status });
+    const messages = (data as { messages?: string[] }).messages;
+    const msg = messages?.join(", ") || (data as { message?: string }).message || text;
+    return NextResponse.json({ error: msg || "Erreur Packlink", details: data }, { status: res.status });
   }
 
   return NextResponse.json(data);

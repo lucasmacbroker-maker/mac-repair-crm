@@ -459,7 +459,9 @@ export default function RepairDetailPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Erreur lors de la création du bordereau");
+        const errMsg = (data as { error?: string }).error || "Erreur lors de la création du bordereau";
+        toast.error(errMsg);
+        console.error("Packlink error:", data);
         return;
       }
       const ref = (data.id || data.reference || data.shipment_id) as string | undefined;

@@ -157,13 +157,6 @@ function InvoiceDoc({ data }: { data: InvoiceData }) {
           </View>
         </View>
 
-        {/* Payment box */}
-        <View style={styles.paymentBox}>
-          <Text style={styles.paymentText}>
-            Un lien de paiement sécurisé vous a été envoyé par email. Garantie 12 mois incluse sur les pièces remplacées et la main d&apos;oeuvre.
-          </Text>
-        </View>
-
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>

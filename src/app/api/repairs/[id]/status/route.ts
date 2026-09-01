@@ -119,7 +119,6 @@ export async function PUT(
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              tiimeCompanyId: 170176,
               invoiceNumber,
               date: new Date().toISOString().split("T")[0],
               client: {
@@ -146,6 +145,7 @@ export async function PUT(
                 tvaRate: 20,
                 tvaAmount: tva,
                 amountTTC: ttc,
+                tiimeCompanyId: "170176",
               },
             }),
           }).catch((e) => console.error("[MAKE WEBHOOK] failed:", e));

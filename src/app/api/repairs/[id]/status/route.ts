@@ -108,6 +108,49 @@ export async function PUT(
     const clientName = `${existing.clientFirstName} ${existing.clientLastName}`;
 
     after(async () => {
+      if (status === "DONE") {
+        const makeWebhookUrl = process.env.MAKE_TIIME_WEBHOOK_URL;
+        if (makeWebhookUrl) {
+          const ttc = invoiceCost;
+          const ht = Math.round((ttc / 1.2) * 100) / 100;
+          const tva = Math.round((ttc - ht) * 100) / 100;
+          const invoiceNumber = `FACT-${Date.now()}`;
+          fetch(makeWebhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              invoiceNumber,
+              date: new Date().toISOString().split("T")[0],
+              client: {
+                firstName: existing.clientFirstName,
+                lastName: existing.clientLastName,
+                fullName: `${existing.clientFirstName} ${existing.clientLastName}`,
+                email: existing.clientEmail,
+                phone: existing.clientPhone || "",
+                address: existing.clientAddress || "",
+                city: existing.clientCity || "",
+                postalCode: existing.clientPostalCode || "",
+                country: "FR",
+              },
+              repair: {
+                id,
+                macModel: existing.macModel,
+                faultType: existing.faultType,
+                serialNumber: existing.serialNumber || "",
+                repairType: existing.repairType,
+                description: `Réparation ${existing.macModel} — ${existing.faultType}`,
+              },
+              invoice: {
+                amountHT: ht,
+                tvaRate: 20,
+                tvaAmount: tva,
+                amountTTC: ttc,
+              },
+            }),
+          }).catch((e) => console.error("[MAKE WEBHOOK] failed:", e));
+        }
+      }
+
       if (status === "DONE" && (invoiceCost > 0 || !isPostal)) {
         // DONE: always send invoice PDF (with payment link for POSTAL, without for LOCAL/HOME)
         try {

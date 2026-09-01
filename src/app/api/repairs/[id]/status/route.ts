@@ -119,6 +119,7 @@ export async function PUT(
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              tiimeCompanyId: 170176,
               invoiceNumber,
               date: new Date().toISOString().split("T")[0],
               client: {

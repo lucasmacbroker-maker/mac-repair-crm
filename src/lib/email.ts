@@ -17,7 +17,7 @@ const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME || "Mac Place";
 const ADDR = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "";
 
 const LOCATION_INFO: Record<string, { address: string; phone: string }> = {
-  PARIS: { address: "39 rue Edouard Vaillant, 94140 Alfortville", phone: "07 82 71 21 23" },
+  PARIS: { address: "39-41 rue du 11 novembre 1918, 94700 Maisons-Alfort", phone: "07 82 71 21 23" },
   NICE:  { address: "12 rue François de Paule, 06300 Nice",       phone: "06 51 11 59 12" },
 };
 
@@ -305,11 +305,12 @@ export async function sendAppointmentConfirmationEmail(
     timeZone: "Europe/Paris",
   });
 
+  const parkingInfo = "<br/><br/><em>Possibilité de se garer sur le parking au-dessus du Auchan. L'accès se fait par le parking du Auchan, les bureaux sont au-dessus.</em>";
   const locationLine = isHome
     ? clientAddress
       ? `Notre technicien se déplacera à votre adresse :<br/><strong>${clientAddress}</strong>`
       : `Notre technicien se déplacera à votre domicile à l'heure indiquée.`
-    : `Merci de vous présenter à l'atelier à l'heure indiquée avec votre Mac.<br/><strong>Adresse :</strong> ${locInfo.address}`;
+    : `Merci de vous présenter à l'atelier à l'heure indiquée avec votre Mac.<br/><strong>Adresse :</strong> ${locInfo.address}${parkingInfo}`;
 
   try {
     await transporter.sendMail({

@@ -8,7 +8,7 @@ import { generateQuotePDF } from "@/lib/quote-pdf";
 import { sendSMS } from "@/lib/sms";
 
 const ADDRESSES: Record<string, string> = {
-  PARIS: "39 rue Edouard Vaillant, 94140 Alfortville",
+  PARIS: "39-41 rue du 11 novembre 1918, 94700 Maisons-Alfort",
   NICE: "12 rue François de Paule, 06300 Nice",
 };
 

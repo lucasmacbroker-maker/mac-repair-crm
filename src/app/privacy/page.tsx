@@ -68,7 +68,7 @@ export default function PrivacyPage() {
         <p>
           SARL ALCAS SOLUTIONS — Mac Place
           <br />
-          39 rue Edouard Vaillant, 94140 Alfortville
+          39-41 rue du 11 novembre 1918, 94700 Maisons-Alfort
           <br />
           <a href="mailto:lucas.macbroker@gmail.com" className="text-blue-600 underline">
             lucas.macbroker@gmail.com

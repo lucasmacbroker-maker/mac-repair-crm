@@ -397,7 +397,7 @@ export default function NewRepairPage() {
               <label className="block text-sm font-medium text-gray-700 mb-3">Atelier</label>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { value: "PARIS", label: "Paris", desc: "39 rue Edouard Vaillant, Alfortville" },
+                  { value: "PARIS", label: "Paris", desc: "39-41 rue du 11 novembre 1918, Maisons-Alfort" },
                   { value: "NICE", label: "Nice", desc: "12 rue François de Paule, 06300 Nice" },
                 ].map((opt) => (
                   <label

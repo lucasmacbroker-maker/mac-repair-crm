@@ -517,7 +517,9 @@ export default function RepairDetailPage() {
 
   const statuses = getStatuses(repair.repairType);
   const currentStatusIndex = statuses.findIndex((s) => s.key === repair.status);
-  const isLastStatus = currentStatusIndex >= statuses.length - 1;
+  const isLastStatus = currentStatusIndex >= statuses.length - 1 || repair.status === 'QUOTE_REFUSED';
+  const normalStatuses = statuses.filter((s) => s.key !== 'QUOTE_REFUSED');
+  const timelineStatuses = repair.status === 'QUOTE_REFUSED' ? [...normalStatuses, statuses.find((s) => s.key === 'QUOTE_REFUSED')!] : normalStatuses;
 
   const totalPartsCost = repair.partsUsed.reduce(
     (sum, p) => sum + p.unitPrice * p.quantity,
@@ -951,16 +953,17 @@ export default function RepairDetailPage() {
               className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3] disabled:opacity-50"
             >
               <option value="" disabled>Changer le statut...</option>
-              {statuses.filter((_, idx) => idx > currentStatusIndex).map((s) => (
+              {statuses.filter((s, idx) => (idx > currentStatusIndex && s.key !== 'QUOTE_REFUSED') || (s.key === 'QUOTE_REFUSED' && repair.status !== 'QUOTE_REFUSED')).map((s) => (
                 <option key={s.key} value={s.key}>{s.icon} {s.label}</option>
               ))}
             </select>
           )}
         </CardHeader>
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {statuses.map((s, idx) => {
-            const isPast = idx < currentStatusIndex;
-            const isCurrent = idx === currentStatusIndex;
+          {timelineStatuses.map((s, idx) => {
+            const currentTimelineIndex = timelineStatuses.findIndex((ts) => ts.key === repair.status);
+            const isPast = idx < currentTimelineIndex;
+            const isCurrent = s.key === repair.status;
             return (
               <React.Fragment key={s.key}>
                 {idx > 0 && (
@@ -972,9 +975,10 @@ export default function RepairDetailPage() {
                   onClick={() => { if (!isCurrent && !statusLoading) handleSetStatus(s.key); }}
                   className={`
                     flex items-center gap-2 px-3 py-2 rounded-lg flex-shrink-0 text-sm transition-all
-                    ${isCurrent ? "bg-[#0071e3] text-white font-medium" : ""}
-                    ${isPast ? "bg-green-50 text-green-700 cursor-pointer hover:bg-green-100" : ""}
-                    ${!isPast && !isCurrent ? "bg-gray-50 text-[#86868b] cursor-pointer hover:bg-gray-100" : ""}
+                    ${isCurrent && s.key === 'QUOTE_REFUSED' ? 'bg-red-500 text-white font-medium' : ''}
+                    ${isCurrent && s.key !== 'QUOTE_REFUSED' ? 'bg-[#0071e3] text-white font-medium' : ''}
+                    ${isPast ? 'bg-green-50 text-green-700 cursor-pointer hover:bg-green-100' : ''}
+                    ${!isPast && !isCurrent ? 'bg-gray-50 text-[#86868b] cursor-pointer hover:bg-gray-100' : ''}
                   `}
                 >
                   {isPast && (

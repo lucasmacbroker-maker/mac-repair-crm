@@ -1,23 +1,26 @@
 export const STATUSES_LOCAL = [
-  { key: "UPCOMING",  label: "Réparation à venir",    icon: "🗓️" },
-  { key: "PENDING",   label: "Mac déposé en atelier", icon: "🏪" },
-  { key: "RECEIVED",  label: "Diagnostic en cours",   icon: "🔍" },
-  { key: "REPAIRING", label: "Réparation en cours",   icon: "🔧" },
-  { key: "DONE",      label: "Réparation terminée",   icon: "✅" },
+  { key: "UPCOMING",      label: "Réparation à venir",    icon: "🗓️" },
+  { key: "PENDING",       label: "Mac déposé en atelier", icon: "🏪" },
+  { key: "RECEIVED",      label: "Diagnostic en cours",   icon: "🔍" },
+  { key: "REPAIRING",     label: "Réparation en cours",   icon: "🔧" },
+  { key: "DONE",          label: "Réparation terminée",   icon: "✅" },
+  { key: "QUOTE_REFUSED", label: "Devis refusé",          icon: "❌" },
 ] as const;
 
 export const STATUSES_HOME = [
-  { key: "PENDING",   label: "Réparation à venir",  icon: "🗓️" },
-  { key: "REPAIRING", label: "Réparation en cours", icon: "🔧" },
-  { key: "DONE",      label: "Réparation terminée", icon: "✅" },
+  { key: "PENDING",       label: "Réparation à venir",  icon: "🗓️" },
+  { key: "REPAIRING",     label: "Réparation en cours", icon: "🔧" },
+  { key: "DONE",          label: "Réparation terminée", icon: "✅" },
+  { key: "QUOTE_REFUSED", label: "Devis refusé",        icon: "❌" },
 ] as const;
 
 export const STATUSES_POSTAL = [
-  { key: "PENDING",   label: "Mac en cours d'envoi",              icon: "📦" },
-  { key: "RECEIVED",  label: "Mac reçu en atelier",               icon: "🏪" },
-  { key: "REPAIRING", label: "Réparation en cours",               icon: "🔧" },
-  { key: "DONE",      label: "Mac réparé, en attente de paiement", icon: "✅" },
-  { key: "CLOSED",    label: "Mac réexpédié",                     icon: "🚀" },
+  { key: "PENDING",       label: "Mac en cours d'envoi",               icon: "📦" },
+  { key: "RECEIVED",      label: "Mac reçu en atelier",                icon: "🏪" },
+  { key: "REPAIRING",     label: "Réparation en cours",                icon: "🔧" },
+  { key: "DONE",          label: "Mac réparé, en attente de paiement", icon: "✅" },
+  { key: "CLOSED",        label: "Mac réexpédié",                      icon: "🚀" },
+  { key: "QUOTE_REFUSED", label: "Devis refusé",                       icon: "❌" },
 ] as const;
 
 // Keep for backward compat
@@ -45,6 +48,7 @@ export const STATUS_COLORS: Record<string, string> = {
   REPAIRING: "bg-orange-100 text-orange-800 border-orange-300",
   DONE: "bg-green-100 text-green-800 border-green-300",
   CLOSED: "bg-gray-100 text-gray-800 border-gray-300",
+  QUOTE_REFUSED: "bg-red-100 text-red-800 border-red-300",
 };
 
 export const MAC_MODELS = [

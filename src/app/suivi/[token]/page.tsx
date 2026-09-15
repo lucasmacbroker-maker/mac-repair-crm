@@ -238,7 +238,11 @@ export default function TrackingPage() {
 
   // ── Build timeline data ─────────────────────────────────────────
 
-  const statuses = getStatuses(repair.repairType);
+  const allStatuses = getStatuses(repair.repairType);
+  const normalStatuses = allStatuses.filter((s) => s.key !== 'QUOTE_REFUSED');
+  const statuses = repair.status === 'QUOTE_REFUSED'
+    ? [...normalStatuses, allStatuses.find((s) => s.key === 'QUOTE_REFUSED')!]
+    : normalStatuses;
   const currentStatusIndex = statuses.findIndex(
     (s) => s.key === repair.status
   );
@@ -427,7 +431,7 @@ export default function TrackingPage() {
                       </svg>
                     </div>
                   ) : isCurrent ? (
-                    <div className="w-10 h-10 rounded-full bg-[#0071e3] flex items-center justify-center shadow-sm shadow-blue-200 pulse-current">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${step.key === 'QUOTE_REFUSED' ? 'bg-red-500 shadow-red-200' : 'bg-[#0071e3] shadow-blue-200 pulse-current'}`}>
                       <span className="text-lg">{step.icon}</span>
                     </div>
                   ) : (

@@ -89,6 +89,7 @@ export default function RepairsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
+  const [tab, setTab] = useState<"active" | "done">("active");
   const [technicians, setTechnicians] = useState<User[]>([]);
 
   useEffect(() => {
@@ -108,6 +109,7 @@ export default function RepairsPage() {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", "20");
+    params.set("statusGroup", tab);
     if (search) params.set("search", search);
     if (statusFilter) params.set("status", statusFilter);
     if (repairTypeFilter) params.set("repairType", repairTypeFilter);
@@ -129,7 +131,7 @@ export default function RepairsPage() {
       setInitialLoad(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, statusFilter, repairTypeFilter, technicianFilter, faultTypeFilter, dateFrom, dateTo]);
+  }, [page, search, statusFilter, repairTypeFilter, technicianFilter, faultTypeFilter, dateFrom, dateTo, tab]);
 
   useEffect(() => {
     fetchRepairs();
@@ -193,6 +195,12 @@ export default function RepairsPage() {
     }
   };
 
+  const handleTabChange = (newTab: "active" | "done") => {
+    setTab(newTab);
+    setPage(1);
+    setStatusFilter("");
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
@@ -220,7 +228,7 @@ export default function RepairsPage() {
             Reparations
           </h1>
           <p className="text-sm text-[#86868b] mt-1">
-            {total} reparation{total !== 1 ? "s" : ""} au total
+            {total} réparation{total !== 1 ? "s" : ""} {tab === "active" ? "en cours" : "terminée" + (total !== 1 ? "s" : "")}
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -249,6 +257,30 @@ export default function RepairsPage() {
             </Button>
           </Link>
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-5 bg-[#f5f5f7] p-1 rounded-xl w-fit">
+        <button
+          onClick={() => handleTabChange("active")}
+          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+            tab === "active"
+              ? "bg-white text-[#1d1d1f] shadow-sm"
+              : "text-[#86868b] hover:text-[#1d1d1f]"
+          }`}
+        >
+          En cours
+        </button>
+        <button
+          onClick={() => handleTabChange("done")}
+          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+            tab === "done"
+              ? "bg-white text-[#1d1d1f] shadow-sm"
+              : "text-[#86868b] hover:text-[#1d1d1f]"
+          }`}
+        >
+          Terminées
+        </button>
       </div>
 
       {/* Filters */}
@@ -321,8 +353,8 @@ export default function RepairsPage() {
       ) : repairs.length === 0 ? (
         <Card>
           <EmptyState
-            title="Aucune reparation trouvee"
-            description="Modifiez vos filtres ou creez une nouvelle reparation."
+            title={tab === "active" ? "Aucune réparation en cours" : "Aucune réparation terminée"}
+            description={tab === "active" ? "Modifiez vos filtres ou créez une nouvelle réparation." : "Les réparations terminées apparaîtront ici."}
             action={
               <Link href="/admin/repairs/new">
                 <Button variant="primary" size="sm">Nouvelle reparation</Button>

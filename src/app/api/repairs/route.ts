@@ -25,6 +25,7 @@ export async function GET(request: Request) {
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
     const status = searchParams.get("status");
+    const statusGroup = searchParams.get("statusGroup"); // "active" | "done"
     const repairType = searchParams.get("repairType");
     const technicianId = searchParams.get("technicianId");
     const faultType = searchParams.get("faultType");
@@ -35,8 +36,13 @@ export async function GET(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
 
+    const TERMINAL_STATUSES = ["DONE", "CLOSED", "QUOTE_REFUSED"];
     if (status) {
       where.status = status;
+    } else if (statusGroup === "active") {
+      where.status = { notIn: TERMINAL_STATUSES };
+    } else if (statusGroup === "done") {
+      where.status = { in: TERMINAL_STATUSES };
     }
     if (repairType) {
       where.repairType = repairType;

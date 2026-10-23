@@ -71,12 +71,19 @@ const faultTypeOptions = [
 export default function RepairsPage() {
   const router = useRouter();
   const toast = useToast();
+
+  // "done" tab uses paginated list
   const [repairs, setRepairs] = useState<Repair[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+
+  // "active" tab uses two-column split
+  const [localRepairs, setLocalRepairs] = useState<Repair[]>([]);
+  const [postalRepairs, setPostalRepairs] = useState<Repair[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -106,24 +113,46 @@ export default function RepairsPage() {
 
   const fetchRepairs = useCallback(async () => {
     if (initialLoad) setLoading(true);
-    const params = new URLSearchParams();
-    params.set("page", String(page));
-    params.set("limit", "20");
-    params.set("statusGroup", tab);
-    if (search) params.set("search", search);
-    if (statusFilter) params.set("status", statusFilter);
-    if (repairTypeFilter) params.set("repairType", repairTypeFilter);
-    if (technicianFilter) params.set("technicianId", technicianFilter);
-    if (faultTypeFilter) params.set("faultType", faultTypeFilter);
-    if (dateFrom) params.set("dateFrom", dateFrom);
-    if (dateTo) params.set("dateTo", dateTo);
+
+    const baseParams = new URLSearchParams();
+    baseParams.set("statusGroup", tab);
+    if (search) baseParams.set("search", search);
+    if (statusFilter) baseParams.set("status", statusFilter);
+    if (technicianFilter) baseParams.set("technicianId", technicianFilter);
+    if (faultTypeFilter) baseParams.set("faultType", faultTypeFilter);
+    if (dateFrom) baseParams.set("dateFrom", dateFrom);
+    if (dateTo) baseParams.set("dateTo", dateTo);
 
     try {
-      const res = await fetch(`/api/repairs?${params}`);
-      const data = await res.json();
-      setRepairs(data.repairs || []);
-      setTotalPages(data.pagination?.totalPages || 1);
-      setTotal(data.pagination?.total || 0);
+      if (tab === "active") {
+        // Fetch all active repairs in one call, split by type on frontend
+        const params = new URLSearchParams(baseParams);
+        params.set("limit", "200");
+        if (repairTypeFilter) params.set("repairType", repairTypeFilter);
+
+        const res = await fetch(`/api/repairs?${params}`);
+        const data = await res.json();
+        const all: Repair[] = data.repairs || [];
+
+        const local = all.filter((r) => r.repairType === "LOCAL" || r.repairType === "HOME");
+        const postal = all.filter((r) => r.repairType === "POSTAL");
+
+        setLocalRepairs(local);
+        setPostalRepairs(postal);
+        setTotal(all.length);
+      } else {
+        // "done" tab: paginated list
+        const params = new URLSearchParams(baseParams);
+        params.set("page", String(page));
+        params.set("limit", "20");
+        if (repairTypeFilter) params.set("repairType", repairTypeFilter);
+
+        const res = await fetch(`/api/repairs?${params}`);
+        const data = await res.json();
+        setRepairs(data.repairs || []);
+        setTotalPages(data.pagination?.totalPages || 1);
+        setTotal(data.pagination?.total || 0);
+      }
     } catch {
       toast.error("Erreur lors du chargement des reparations");
     } finally {
@@ -218,6 +247,62 @@ export default function RepairsPage() {
       label: `${t.firstName} ${t.lastName}`,
     })),
   ];
+
+  // Compact repair row used in the two-column active layout
+  const RepairRow = ({ repair }: { repair: Repair }) => (
+    <div
+      className="group px-4 py-3 hover:bg-gray-50/70 cursor-pointer transition-colors"
+      onClick={() => router.push(`/admin/repairs/${repair.id}`)}
+    >
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-[#1d1d1f] truncate">
+            {repair.clientFirstName} {repair.clientLastName}
+          </p>
+          <p className="text-xs text-[#86868b]">{repair.clientPhone}</p>
+        </div>
+        <StatusBadge status={repair.status} repairType={repair.repairType} />
+      </div>
+      <div className="flex items-center justify-between gap-2 mt-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {repair.repairType !== "POSTAL" && (
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${repairTypeColor(repair.repairType)}`}>
+              {repairTypeLabel(repair.repairType)}
+            </span>
+          )}
+          <span className="text-xs text-[#424245] truncate">{repair.macModel}</span>
+          <span className="text-xs text-[#86868b] flex-shrink-0">·</span>
+          <span className="text-xs text-[#86868b] truncate">{repair.faultType}</span>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs text-[#86868b]">
+            {repair.appointmentDate ? (
+              <span className="flex flex-col items-end gap-0">
+                <span className="text-[10px] text-[#0071e3] font-medium leading-tight">RDV</span>
+                <span className="leading-tight">{new Date(repair.appointmentDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}</span>
+              </span>
+            ) : (
+              new Date(repair.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })
+            )}
+          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); setDeleteId(repair.id); }}
+            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all p-0.5"
+            title="Supprimer"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Determine which columns to show based on repairTypeFilter
+  const showLocal = !repairTypeFilter || repairTypeFilter === "LOCAL" || repairTypeFilter === "HOME";
+  const showPostal = !repairTypeFilter || repairTypeFilter === "POSTAL";
+  const oneColumn = !showLocal || !showPostal;
 
   return (
     <div>
@@ -347,14 +432,82 @@ export default function RepairsPage() {
         </form>
       </Card>
 
-      {/* Table */}
+      {/* Content */}
       {loading ? (
         <PageLoader />
+      ) : tab === "active" ? (
+        /* ── Active tab: two-column layout ── */
+        (localRepairs.length === 0 && postalRepairs.length === 0) ? (
+          <Card>
+            <EmptyState
+              title="Aucune réparation en cours"
+              description="Modifiez vos filtres ou créez une nouvelle réparation."
+              action={
+                <Link href="/admin/repairs/new">
+                  <Button variant="primary" size="sm">Nouvelle reparation</Button>
+                </Link>
+              }
+            />
+          </Card>
+        ) : (
+          <div className={`grid grid-cols-1 ${oneColumn ? "" : "lg:grid-cols-2"} gap-6`}>
+            {/* Atelier & Domicile column */}
+            {showLocal && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm font-semibold text-[#1d1d1f]">Atelier & Domicile</span>
+                  <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">
+                    {localRepairs.length}
+                  </span>
+                </div>
+                {localRepairs.length === 0 ? (
+                  <Card>
+                    <p className="text-sm text-[#86868b] text-center py-4">Aucune réparation</p>
+                  </Card>
+                ) : (
+                  <Card padding="none" className="overflow-hidden">
+                    <div className="divide-y divide-gray-100">
+                      {localRepairs.map((repair) => (
+                        <RepairRow key={repair.id} repair={repair} />
+                      ))}
+                    </div>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* Envoi Postal column */}
+            {showPostal && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm font-semibold text-[#1d1d1f]">Envoi Postal</span>
+                  <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
+                    {postalRepairs.length}
+                  </span>
+                </div>
+                {postalRepairs.length === 0 ? (
+                  <Card>
+                    <p className="text-sm text-[#86868b] text-center py-4">Aucune réparation</p>
+                  </Card>
+                ) : (
+                  <Card padding="none" className="overflow-hidden">
+                    <div className="divide-y divide-gray-100">
+                      {postalRepairs.map((repair) => (
+                        <RepairRow key={repair.id} repair={repair} />
+                      ))}
+                    </div>
+                  </Card>
+                )}
+              </div>
+            )}
+          </div>
+        )
       ) : repairs.length === 0 ? (
+        /* ── Done tab: empty state ── */
         <Card>
           <EmptyState
-            title={tab === "active" ? "Aucune réparation en cours" : "Aucune réparation terminée"}
-            description={tab === "active" ? "Modifiez vos filtres ou créez une nouvelle réparation." : "Les réparations terminées apparaîtront ici."}
+            title="Aucune réparation terminée"
+            description="Les réparations terminées apparaîtront ici."
             action={
               <Link href="/admin/repairs/new">
                 <Button variant="primary" size="sm">Nouvelle reparation</Button>
@@ -363,6 +516,7 @@ export default function RepairsPage() {
           />
         </Card>
       ) : (
+        /* ── Done tab: paginated table ── */
         <>
           {/* Mobile cards */}
           <div className="lg:hidden space-y-3">
@@ -508,6 +662,7 @@ export default function RepairsPage() {
           </div>
         </>
       )}
+
       {/* Modal de confirmation suppression */}
       {deleteId && (
         <Modal isOpen={!!deleteId} title="Supprimer cette reparation ?" onClose={() => setDeleteId(null)}>

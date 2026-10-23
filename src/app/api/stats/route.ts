@@ -4,6 +4,11 @@ import { getCurrentUser } from "@/lib/auth";
 
 const TERMINAL = ["DONE", "CLOSED"];
 
+/** Revenue for a repair: prefer finalCost if set, otherwise estimatedCost */
+function repairRevenue(r: { finalCost: number; estimatedCost: number }): number {
+  return r.finalCost > 0 ? r.finalCost : r.estimatedCost;
+}
+
 export async function GET() {
   try {
     const user = await getCurrentUser();
@@ -16,90 +21,70 @@ export async function GET() {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
-    // ── Revenue KPIs ──────────────────────────────────────────────────────────
-    const [
-      totalRevenueResult,
-      revenueThisMonthResult,
-      revenueLastMonthResult,
-      totalCompleted,
-    ] = await Promise.all([
-      prisma.repair.aggregate({
-        _sum: { finalCost: true },
-        where: { status: { in: TERMINAL } },
-      }),
-      prisma.repair.aggregate({
-        _sum: { finalCost: true },
-        where: {
-          status: { in: TERMINAL },
-          closedAt: { gte: startOfMonth, lte: endOfMonth },
-        },
-      }),
-      prisma.repair.aggregate({
-        _sum: { finalCost: true },
-        where: {
-          status: { in: TERMINAL },
-          closedAt: { gte: startOfLastMonth, lte: endOfLastMonth },
-        },
-      }),
-      prisma.repair.count({ where: { status: { in: TERMINAL } } }),
-    ]);
+    // ── Fetch all completed repairs for revenue calculations ──────────────────
+    const completedRepairs = await prisma.repair.findMany({
+      where: { status: { in: TERMINAL } },
+      select: {
+        id: true,
+        repairType: true,
+        faultType: true,
+        finalCost: true,
+        estimatedCost: true,
+        closedAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
-    const totalRevenue = totalRevenueResult._sum.finalCost || 0;
-    const revenueThisMonth = revenueThisMonthResult._sum.finalCost || 0;
-    const revenueLastMonth = revenueLastMonthResult._sum.finalCost || 0;
+    const totalCompleted = completedRepairs.length;
+    const totalRevenue = completedRepairs.reduce((s, r) => s + repairRevenue(r), 0);
     const avgTicket = totalCompleted > 0 ? totalRevenue / totalCompleted : 0;
 
+    // Monthly revenue filter helper
+    const inMonth = (r: { closedAt: Date | null; updatedAt: Date }, from: Date, to: Date) => {
+      const d = r.closedAt || r.updatedAt;
+      return d >= from && d <= to;
+    };
+
+    const revenueThisMonth = completedRepairs
+      .filter((r) => inMonth(r, startOfMonth, endOfMonth))
+      .reduce((s, r) => s + repairRevenue(r), 0);
+
+    const revenueLastMonth = completedRepairs
+      .filter((r) => inMonth(r, startOfLastMonth, endOfLastMonth))
+      .reduce((s, r) => s + repairRevenue(r), 0);
+
     // ── Revenue by repair type ────────────────────────────────────────────────
-    const revenueByTypeRaw = await prisma.repair.groupBy({
-      by: ["repairType"],
-      _sum: { finalCost: true },
-      _count: { id: true },
-      where: { status: { in: TERMINAL } },
-    });
-    const revenueByType = revenueByTypeRaw.map((r) => ({
-      type: r.repairType,
-      revenue: r._sum.finalCost || 0,
-      count: r._count.id,
-    }));
+    const typeMap = new Map<string, { revenue: number; count: number }>();
+    for (const r of completedRepairs) {
+      const cur = typeMap.get(r.repairType) || { revenue: 0, count: 0 };
+      typeMap.set(r.repairType, { revenue: cur.revenue + repairRevenue(r), count: cur.count + 1 });
+    }
+    const revenueByType = Array.from(typeMap.entries()).map(([type, v]) => ({ type, ...v }));
 
     // ── Revenue by fault type ─────────────────────────────────────────────────
-    const revenueByFaultRaw = await prisma.repair.groupBy({
-      by: ["faultType"],
-      _sum: { finalCost: true },
-      _count: { id: true },
-      where: { status: { in: TERMINAL } },
-      orderBy: { _sum: { finalCost: "desc" } },
-    });
-    const revenueByFault = revenueByFaultRaw.map((r) => ({
-      faultType: r.faultType,
-      revenue: r._sum.finalCost || 0,
-      count: r._count.id,
-    }));
+    const faultMap = new Map<string, { revenue: number; count: number }>();
+    for (const r of completedRepairs) {
+      const cur = faultMap.get(r.faultType) || { revenue: 0, count: 0 };
+      faultMap.set(r.faultType, { revenue: cur.revenue + repairRevenue(r), count: cur.count + 1 });
+    }
+    const revenueByFault = Array.from(faultMap.entries())
+      .map(([faultType, v]) => ({ faultType, ...v }))
+      .sort((a, b) => b.revenue - a.revenue);
 
-    // ── Monthly trend (revenue + count, last 12 months) ───────────────────────
-    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-    const allClosedForMonths = await prisma.repair.findMany({
-      where: {
-        status: { in: TERMINAL },
-        closedAt: { gte: twelveMonthsAgo },
-      },
-      select: { closedAt: true, createdAt: true, finalCost: true },
-    });
-
+    // ── Monthly trend (last 12 months) ────────────────────────────────────────
     const revenueByMonth: { month: string; revenue: number; count: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const year = d.getFullYear();
-      const month = d.getMonth();
-      const key = `${year}-${String(month + 1).padStart(2, "0")}`;
-      const items = allClosedForMonths.filter((r) => {
-        const date = r.closedAt || r.createdAt;
-        return date.getFullYear() === year && date.getMonth() === month;
-      });
+      const from = new Date(d.getFullYear(), d.getMonth(), 1);
+      const to = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const items = completedRepairs.filter((r) => inMonth(r, from, to));
       revenueByMonth.push({
         month: key,
-        revenue: Math.round(items.reduce((s, r) => s + (r.finalCost || 0), 0) * 100) / 100,
+        revenue: Math.round(items.reduce((s, r) => s + repairRevenue(r), 0) * 100) / 100,
         count: items.length,
       });
     }
@@ -107,32 +92,36 @@ export async function GET() {
     // ── Quote conversion ──────────────────────────────────────────────────────
     const [quotesWithPrice, quotesValidated, quotesRefused] = await Promise.all([
       prisma.repair.count({ where: { estimatedCost: { gt: 0 } } }),
-      prisma.repair.count({ where: { quoteValidated: true } }),
+      // Count completed repairs with a price as "accepted" (implicit conversion)
+      prisma.repair.count({ where: { status: { in: TERMINAL }, estimatedCost: { gt: 0 } } }),
       prisma.repair.count({ where: { status: "QUOTE_REFUSED" } }),
     ]);
 
     // ── Volume KPIs ───────────────────────────────────────────────────────────
-    const [totalActive, postalActive, localActive, completedThisMonth] = await Promise.all([
+    const [totalActive, postalActive, localActive, completedThisMonthCount] = await Promise.all([
       prisma.repair.count({ where: { status: { notIn: [...TERMINAL, "QUOTE_REFUSED"] } } }),
       prisma.repair.count({ where: { status: { notIn: [...TERMINAL, "QUOTE_REFUSED"] }, repairType: "POSTAL" } }),
       prisma.repair.count({ where: { status: { notIn: [...TERMINAL, "QUOTE_REFUSED"] }, repairType: "LOCAL" } }),
       prisma.repair.count({
-        where: { status: { in: TERMINAL }, closedAt: { gte: startOfMonth, lte: endOfMonth } },
+        where: {
+          status: { in: TERMINAL },
+          OR: [
+            { closedAt: { gte: startOfMonth, lte: endOfMonth } },
+            { updatedAt: { gte: startOfMonth, lte: endOfMonth }, closedAt: null },
+          ],
+        },
       }),
     ]);
 
-    // ── Repairs by fault type (volume) ────────────────────────────────────────
+    // ── Repairs by fault type (volume, all time) ──────────────────────────────
     const repairsByFaultRaw = await prisma.repair.groupBy({
       by: ["faultType"],
       _count: { id: true },
       orderBy: { _count: { id: "desc" } },
     });
-    const repairsByFault = repairsByFaultRaw.map((r) => ({
-      faultType: r.faultType,
-      count: r._count.id,
-    }));
+    const repairsByFault = repairsByFaultRaw.map((r) => ({ faultType: r.faultType, count: r._count.id }));
 
-    // ── Repairs by month (volume, for backwards compat) ───────────────────────
+    // ── Repairs by month (volume, all created) ────────────────────────────────
     const allRepairsForMonths = await prisma.repair.findMany({
       where: { createdAt: { gte: twelveMonthsAgo } },
       select: { createdAt: true },
@@ -199,11 +188,11 @@ export async function GET() {
       totalActive,
       postalActive,
       localActive,
-      completedThisMonth,
-      // Legacy fields
+      completedThisMonth: completedThisMonthCount,
+      // Legacy
       repairsByFault,
       repairsByMonth,
-      repairsByType: revenueByTypeRaw.map((r) => ({ type: r.repairType, count: r._count.id })),
+      repairsByType: revenueByType.map((r) => ({ type: r.type, count: r.count })),
       topModels,
       stockAlerts,
       totalStockValue: Math.round(totalStockValue * 100) / 100,

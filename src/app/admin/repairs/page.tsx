@@ -21,6 +21,7 @@ interface Repair {
   clientFirstName: string;
   clientLastName: string;
   clientEmail: string;
+  clientPhone: string;
   macModel: string;
   faultType: string;
   repairType: string;
@@ -341,7 +342,7 @@ export default function RepairsPage() {
                       <p className="text-sm font-semibold text-[#1d1d1f]">
                         {repair.clientFirstName} {repair.clientLastName}
                       </p>
-                      <p className="text-xs text-[#86868b]">{repair.clientEmail}</p>
+                      <p className="text-xs text-[#86868b]">{repair.clientPhone}</p>
                     </div>
                     <StatusBadge status={repair.status} repairType={repair.repairType} />
                   </div>
@@ -415,7 +416,7 @@ export default function RepairsPage() {
                         <p className="text-sm font-medium text-[#1d1d1f]">
                           {repair.clientFirstName} {repair.clientLastName}
                         </p>
-                        <p className="text-xs text-[#86868b]">{repair.clientEmail}</p>
+                        <p className="text-xs text-[#86868b]">{repair.clientPhone}</p>
                       </td>
                       <td className="px-4 py-3 text-sm text-[#424245] font-mono">
                         {repair.serialNumber || <span className="text-[#86868b]">—</span>}

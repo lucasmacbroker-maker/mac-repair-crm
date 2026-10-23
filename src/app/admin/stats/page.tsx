@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 import { PageLoader } from "@/components/ui/Loader";
 import {
   ComposedChart,
@@ -132,14 +134,44 @@ const TooltipEur = ({ active, payload, label }: { active?: boolean; payload?: { 
 export default function StatsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  useEffect(() => {
-    fetch("/api/stats")
+  const fetchStats = (from: string, to: string) => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (from) params.set("dateFrom", from);
+    if (to) params.set("dateTo", to);
+    fetch(`/api/stats${params.toString() ? "?" + params : ""}`)
       .then((r) => r.json())
       .then(setStats)
       .catch(() => {})
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchStats("", "");
   }, []);
+
+  const applyPreset = (preset: string) => {
+    const now = new Date();
+    let from = "";
+    let to = now.toISOString().slice(0, 10);
+    if (preset === "month") {
+      from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    } else if (preset === "3m") {
+      from = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().slice(0, 10);
+    } else if (preset === "6m") {
+      from = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().slice(0, 10);
+    } else if (preset === "year") {
+      from = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+    } else {
+      from = ""; to = "";
+    }
+    setDateFrom(from);
+    setDateTo(to);
+    fetchStats(from, to);
+  };
 
   if (loading) return <PageLoader />;
   if (!stats) return <div className="text-center py-12 text-[#86868b]">Impossible de charger les statistiques.</div>;
@@ -171,10 +203,76 @@ export default function StatsPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-[#1d1d1f] tracking-tight">Statistiques</h1>
-        <p className="text-sm text-[#86868b] mt-1">Vue d&apos;ensemble de l&apos;activité Mac Place</p>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-[#1d1d1f] tracking-tight">Statistiques</h1>
+          <p className="text-sm text-[#86868b] mt-1">Vue d&apos;ensemble de l&apos;activité Mac Place</p>
+        </div>
       </div>
+
+      {/* Date filter */}
+      <Card className="mb-8">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex gap-1.5 flex-wrap">
+            {[
+              { key: "all", label: "Tout" },
+              { key: "month", label: "Ce mois" },
+              { key: "3m", label: "3 mois" },
+              { key: "6m", label: "6 mois" },
+              { key: "year", label: "Cette année" },
+            ].map((p) => (
+              <button
+                key={p.key}
+                onClick={() => applyPreset(p.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  (p.key === "all" && !dateFrom && !dateTo) ||
+                  (p.key !== "all" && dateFrom === new Date(
+                    p.key === "month" ? new Date().getFullYear() : p.key === "year" ? new Date().getFullYear() : new Date().getFullYear(),
+                    p.key === "month" ? new Date().getMonth() : p.key === "3m" ? new Date().getMonth() - 2 : p.key === "6m" ? new Date().getMonth() - 5 : 0,
+                    1
+                  ).toISOString().slice(0, 10))
+                    ? "bg-[#0071e3] text-white shadow-sm"
+                    : "bg-[#f5f5f7] text-[#424245] hover:bg-gray-200"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-xs text-[#86868b]">Du</span>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="!py-1.5 !text-sm w-36"
+            />
+            <span className="text-xs text-[#86868b]">au</span>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="!py-1.5 !text-sm w-36"
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => fetchStats(dateFrom, dateTo)}
+            >
+              Appliquer
+            </Button>
+            {(dateFrom || dateTo) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => applyPreset("all")}
+              >
+                ✕
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
 
       {/* ── KPI Cards ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

@@ -676,9 +676,19 @@ export default function RepairDetailPage() {
               </div>
             )}
             {repair.inboundTracking && (
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-[#86868b]">Suivi entrant</span>
-                <span className="text-[#1d1d1f] font-mono text-xs">{repair.inboundTracking}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#1d1d1f] font-mono text-xs">{repair.inboundTracking}</span>
+                  <a
+                    href={`https://www.chronopost.fr/tracking-no-powerful/tracking/suivi?listeNumerosLT=${encodeURIComponent(repair.inboundTracking)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#0071e3] hover:text-[#0077ed] text-xs font-medium transition-colors whitespace-nowrap"
+                  >
+                    Suivi Chronopost &rarr;
+                  </a>
+                </div>
               </div>
             )}
             {repair.outboundTracking && (

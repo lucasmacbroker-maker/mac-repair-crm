@@ -681,7 +681,7 @@ export default function RepairDetailPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-[#1d1d1f] font-mono text-xs">{repair.inboundTracking}</span>
                   <a
-                    href={`https://www.chronopost.fr/tracking-no-powerful/tracking/suivi?listeNumerosLT=${encodeURIComponent(repair.inboundTracking)}`}
+                    href={`https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=${encodeURIComponent(repair.inboundTracking)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[#0071e3] hover:text-[#0077ed] text-xs font-medium transition-colors whitespace-nowrap"

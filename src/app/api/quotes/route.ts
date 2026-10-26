@@ -115,6 +115,7 @@ export async function POST(request: Request) {
             faultType: typedLines[0]?.faultType || "Devis",
             faultDescription: typedLines.map(l => l.description).filter(Boolean).join(" / "),
             estimatedCost,
+            lines: typedLines,
             createdAt: quote.createdAt,
             token: quote.token,
           });

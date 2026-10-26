@@ -13,6 +13,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const quote = await prisma.quote.findUnique({ where: { id } });
     if (!quote) return NextResponse.json({ error: "Devis introuvable" }, { status: 404 });
 
+    const storedLines = Array.isArray(quote.lines) ? quote.lines as { description: string; faultType?: string; amountTTC: number }[] : [];
+    const hasLines = storedLines.length > 0;
+    const totalTTC = hasLines ? Math.round(quote.estimatedCost * 1.2 * 100) / 100 : quote.estimatedCost;
+
     const pdf = await generateQuotePDF({
       id: quote.id,
       clientFirstName: quote.clientFirstName,
@@ -27,12 +31,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       faultType: quote.faultType || "Devis",
       faultDescription: quote.faultDescription,
       estimatedCost: quote.estimatedCost,
+      lines: storedLines,
       createdAt: quote.createdAt,
       token: quote.token,
     });
 
     const clientName = `${quote.clientFirstName} ${quote.clientLastName}`;
-    await sendQuoteEmail(quote.clientEmail, clientName, quote.token, quote.macModel, quote.estimatedCost, pdf, undefined, false, "", quote.location);
+    await sendQuoteEmail(quote.clientEmail, clientName, quote.token, quote.macModel, totalTTC, pdf, undefined, false, "", quote.location);
 
     const updated = await prisma.quote.update({
       where: { id },

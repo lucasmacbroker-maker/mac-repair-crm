@@ -205,51 +205,69 @@ export default function QuoteDetailPage() {
         {quote.faultDescription && <Row label="Description" value={quote.faultDescription} />}
       </Card>
 
-      {/* Lines */}
-      {quote.lines && quote.lines.length > 0 && (
-        <Card className="mb-5">
-          <h2 className="text-sm font-semibold text-[#1d1d1f] mb-3">Lignes du devis</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left text-xs font-medium text-[#86868b] pb-2">Description</th>
-                  <th className="text-left text-xs font-medium text-[#86868b] pb-2">Type de panne</th>
-                  <th className="text-right text-xs font-medium text-[#86868b] pb-2">Montant TTC</th>
-                </tr>
-              </thead>
-              <tbody>
-                {quote.lines.map((line, i) => (
-                  <tr key={i} className="border-b border-gray-50 last:border-0">
-                    <td className="py-2.5 text-[#1d1d1f]">{line.description || "—"}</td>
-                    <td className="py-2.5 text-[#86868b] text-xs">{line.faultType || "—"}</td>
-                    <td className="py-2.5 text-right font-medium text-[#1d1d1f]">
-                      {line.amountTTC > 0 ? `${line.amountTTC.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : "—"}
-                    </td>
+      {/* Lines or simple price */}
+      <Card className="mb-5">
+        <h2 className="text-sm font-semibold text-[#1d1d1f] mb-3">Devis</h2>
+        {quote.lines && quote.lines.length > 0 ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left text-xs font-medium text-[#86868b] pb-2">Description</th>
+                    <th className="text-left text-xs font-medium text-[#86868b] pb-2">Type de panne</th>
+                    <th className="text-right text-xs font-medium text-[#86868b] pb-2">Montant TTC</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* Total breakdown */}
-          <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
+                </thead>
+                <tbody>
+                  {quote.lines.map((line, i) => (
+                    <tr key={i} className="border-b border-gray-50 last:border-0">
+                      <td className="py-2.5 text-[#1d1d1f]">{line.description || "—"}</td>
+                      <td className="py-2.5 text-[#86868b] text-xs">{line.faultType || "—"}</td>
+                      <td className="py-2.5 text-right font-medium text-[#1d1d1f]">
+                        {line.amountTTC > 0 ? `${line.amountTTC.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
+              <div className="space-y-1 text-sm min-w-[200px]">
+                <div className="flex justify-between text-[#86868b]">
+                  <span>Total HT</span>
+                  <span>{quote.estimatedCost.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                </div>
+                <div className="flex justify-between text-[#86868b]">
+                  <span>TVA (20%)</span>
+                  <span>{(quote.estimatedCost * 0.2).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                </div>
+                <div className="flex justify-between font-semibold text-[#1d1d1f] text-base pt-1 border-t border-gray-200">
+                  <span>Total TTC</span>
+                  <span>{ttc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex justify-end">
             <div className="space-y-1 text-sm min-w-[200px]">
               <div className="flex justify-between text-[#86868b]">
-                <span>Total HT</span>
-                <span>{quote.estimatedCost.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                <span>Montant HT</span>
+                <span>{quote.estimatedCost > 0 ? `${quote.estimatedCost.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : "—"}</span>
               </div>
               <div className="flex justify-between text-[#86868b]">
                 <span>TVA (20%)</span>
-                <span>{(quote.estimatedCost * 0.2).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                <span>{quote.estimatedCost > 0 ? `${(quote.estimatedCost * 0.2).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : "—"}</span>
               </div>
               <div className="flex justify-between font-semibold text-[#1d1d1f] text-base pt-1 border-t border-gray-200">
                 <span>Total TTC</span>
-                <span>{ttc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                <span>{quote.estimatedCost > 0 ? `${ttc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : "—"}</span>
               </div>
             </div>
           </div>
-        </Card>
-      )}
+        )}
+      </Card>
 
       {/* Quote meta */}
       <Card className="mb-5">

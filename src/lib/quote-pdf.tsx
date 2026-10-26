@@ -15,6 +15,7 @@ export interface QuoteData {
   faultType: string;
   faultDescription?: string;
   estimatedCost: number;
+  lines?: { description: string; faultType?: string; amountTTC: number }[];
   createdAt?: Date;
   token: string;
 }
@@ -74,8 +75,10 @@ const styles = StyleSheet.create({
 });
 
 function QuoteDoc({ data }: { data: QuoteData }) {
-  const ttc = data.estimatedCost; // prix saisi = TTC
-  const ht  = Math.round((ttc / 1.2) * 100) / 100;
+  const hasLines = data.lines && data.lines.length > 0;
+  // New quotes: estimatedCost = HT. Old quotes: estimatedCost = TTC (legacy)
+  const ht  = hasLines ? data.estimatedCost : Math.round((data.estimatedCost / 1.2) * 100) / 100;
+  const ttc = hasLines ? Math.round(data.estimatedCost * 1.2 * 100) / 100 : data.estimatedCost;
   const tva = Math.round((ttc - ht) * 100) / 100;
   const date = data.createdAt ? new Date(data.createdAt) : new Date();
   const num = data.id.slice(0, 8).toUpperCase();
@@ -123,17 +126,29 @@ function QuoteDoc({ data }: { data: QuoteData }) {
           <Text style={[styles.tableHeaderText, styles.colPrice]}>Prix HT</Text>
         </View>
 
-        <View style={styles.tableRow}>
-          <View style={styles.colDesc}>
-            <Text style={styles.cellBold}>Réparation {data.macModel}</Text>
-            <Text style={styles.cellSmall}>Panne : {data.faultType}{data.faultDescription ? " — " + data.faultDescription : ""}</Text>
-            {data.serialNumber ? <Text style={styles.cellSmall}>N° série : {data.serialNumber}</Text> : null}
+        {hasLines ? data.lines!.map((line, i) => (
+          <View key={i} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+            <View style={styles.colDesc}>
+              <Text style={styles.cellBold}>{line.description || "Prestation"}</Text>
+              {line.faultType ? <Text style={styles.cellSmall}>Type : {line.faultType}</Text> : null}
+              {i === 0 && data.serialNumber ? <Text style={styles.cellSmall}>N° série : {data.serialNumber}</Text> : null}
+            </View>
+            <Text style={[styles.cell, styles.colQty]}>1</Text>
+            <Text style={[styles.cell, styles.colPrice]}>{fmt(Math.round((line.amountTTC / 1.2) * 100) / 100)}</Text>
           </View>
-          <Text style={[styles.cell, styles.colQty]}>1</Text>
-          <Text style={[styles.cell, styles.colPrice]}>{fmt(ht)}</Text>
-        </View>
+        )) : (
+          <View style={styles.tableRow}>
+            <View style={styles.colDesc}>
+              <Text style={styles.cellBold}>Réparation {data.macModel}</Text>
+              <Text style={styles.cellSmall}>Panne : {data.faultType}{data.faultDescription ? " — " + data.faultDescription : ""}</Text>
+              {data.serialNumber ? <Text style={styles.cellSmall}>N° série : {data.serialNumber}</Text> : null}
+            </View>
+            <Text style={[styles.cell, styles.colQty]}>1</Text>
+            <Text style={[styles.cell, styles.colPrice]}>{fmt(ht)}</Text>
+          </View>
+        )}
 
-        <View style={styles.tableRowAlt}>
+        <View style={hasLines && data.lines!.length % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
           <View style={styles.colDesc}>
             <Text style={styles.cellBold}>Garantie</Text>
             <Text style={styles.cellSmall}>12 mois pièces et main d'œuvre</Text>

@@ -73,6 +73,7 @@ export const FAULT_TYPES = [
   "RAM",
   "Ventilateur / surchauffe",
   "Dégât des eaux",
+  "Top Case",
   "Autre",
 ] as const;
 

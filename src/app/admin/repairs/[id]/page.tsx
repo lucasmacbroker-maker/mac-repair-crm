@@ -165,6 +165,11 @@ export default function RepairDetailPage() {
   const [returnExtractingTracking, setReturnExtractingTracking] = useState(false);
   const [returnTrackingAutoFilled, setReturnTrackingAutoFilled] = useState(false);
 
+  // Devis inline edit
+  const [editingDevis, setEditingDevis] = useState(false);
+  const [devisTTC, setDevisTTC] = useState("");
+  const [savingDevis, setSavingDevis] = useState(false);
+
   // Attachments
   const [uploading, setUploading] = useState(false);
   const [attachmentType, setAttachmentType] = useState("Photo");
@@ -297,6 +302,27 @@ export default function RepairDetailPage() {
       toast.error("Erreur de connexion");
     } finally {
       setAddingPart(false);
+    }
+  };
+
+  const handleSaveDevis = async () => {
+    const ttc = parseFloat(devisTTC);
+    if (!ttc || ttc <= 0) return;
+    setSavingDevis(true);
+    try {
+      const res = await fetch(`/api/repairs/${repairId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estimatedCost: Math.round((ttc / 1.2) * 100) / 100 }),
+      });
+      if (!res.ok) throw new Error("Erreur");
+      toast.success("Devis mis à jour ✓");
+      setEditingDevis(false);
+      fetchRepair();
+    } catch {
+      toast.error("Erreur lors de la sauvegarde");
+    } finally {
+      setSavingDevis(false);
     }
   };
 
@@ -748,12 +774,6 @@ export default function RepairDetailPage() {
           </CardHeader>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-[#86868b]">Cout estime</span>
-              <span className="text-[#1d1d1f] font-medium">
-                {repair.estimatedCost.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
-              </span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-[#86868b]">Cout final</span>
               <span className="text-[#1d1d1f] font-medium">
                 {repair.finalCost.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
@@ -766,16 +786,99 @@ export default function RepairDetailPage() {
               </span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-              <span className="text-[#86868b]">Devis</span>
+              <span className="text-[#86868b]">Devis validé</span>
               {repair.quoteValidated ? (
                 <Badge variant="success">
                   Valide le {new Date(repair.quoteValidatedAt!).toLocaleDateString("fr-FR")}
                 </Badge>
               ) : (
-                <Badge variant="neutral">Non valide</Badge>
+                <Badge variant="neutral">Non validé</Badge>
               )}
             </div>
           </div>
+        </Card>
+
+        {/* Devis estimatif inline */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Devis estimatif</CardTitle>
+              {!editingDevis ? (
+                <button
+                  onClick={() => { setDevisTTC(String(Math.round(repair.estimatedCost * 1.2 * 100) / 100)); setEditingDevis(true); }}
+                  className="text-xs text-[#0071e3] hover:underline flex items-center gap-1"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Modifier
+                </button>
+              ) : (
+                <button onClick={() => setEditingDevis(false)} className="text-xs text-[#86868b] hover:text-[#1d1d1f]">Annuler</button>
+              )}
+            </div>
+          </CardHeader>
+          {editingDevis ? (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-[#86868b] mb-1">Montant TTC (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={devisTTC}
+                  onChange={(e) => setDevisTTC(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3]"
+                  placeholder="Ex: 299.00"
+                  autoFocus
+                />
+              </div>
+              {parseFloat(devisTTC) > 0 && (
+                <div className="bg-[#f5f5f7] rounded-lg p-3 space-y-1 text-sm">
+                  <div className="flex justify-between text-[#86868b]">
+                    <span>HT</span>
+                    <span>{(Math.round(parseFloat(devisTTC) / 1.2 * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                  </div>
+                  <div className="flex justify-between text-[#86868b]">
+                    <span>TVA (20%)</span>
+                    <span>{(Math.round((parseFloat(devisTTC) - parseFloat(devisTTC) / 1.2) * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-[#1d1d1f] pt-1 border-t border-gray-200">
+                    <span>Total TTC</span>
+                    <span>{parseFloat(devisTTC).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={handleSaveDevis}
+                disabled={savingDevis || !parseFloat(devisTTC)}
+                className="w-full bg-[#0071e3] text-white text-sm font-medium py-2 rounded-lg hover:bg-[#0077ed] disabled:opacity-50 transition-colors"
+              >
+                {savingDevis ? "Sauvegarde..." : "Enregistrer"}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-1 text-sm">
+              {repair.estimatedCost > 0 ? (
+                <>
+                  <div className="flex justify-between text-[#86868b]">
+                    <span>Montant HT</span>
+                    <span>{repair.estimatedCost.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                  </div>
+                  <div className="flex justify-between text-[#86868b]">
+                    <span>TVA (20%)</span>
+                    <span>{(repair.estimatedCost * 0.2).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-[#1d1d1f] text-base pt-2 border-t border-gray-100">
+                    <span>Total TTC</span>
+                    <span>{(repair.estimatedCost * 1.2).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-[#86868b] text-xs">Aucun devis renseigné. Cliquez sur Modifier pour en ajouter un.</p>
+              )}
+            </div>
+          )}
         </Card>
       </div>
 

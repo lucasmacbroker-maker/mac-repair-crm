@@ -280,6 +280,7 @@ export default function RepairsPage() {
               <span className="flex flex-col items-end gap-0">
                 <span className="text-[10px] text-[#0071e3] font-medium leading-tight">RDV</span>
                 <span className="leading-tight">{new Date(repair.appointmentDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}</span>
+                <span className="text-[10px] text-[#86868b] leading-tight">{new Date(repair.appointmentDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
               </span>
             ) : (
               new Date(repair.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })

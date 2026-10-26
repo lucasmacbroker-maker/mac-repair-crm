@@ -22,6 +22,7 @@ model User {
   repairs       Repair[]       @relation("AssignedTechnician")
   statusChanges StatusChange[]
   repairNotes   RepairNote[]
+  quotes        Quote[]
 }
 
 model Repair {
@@ -240,4 +241,43 @@ model ProspectAttachment {
   mimeType   String
   size       Int
   createdAt  DateTime @default(now())
+}
+
+model Quote {
+  id               String    @id @default(uuid())
+  token            String    @unique @default(uuid())
+
+  // Client info
+  clientFirstName  String
+  clientLastName   String
+  clientCompany    String    @default("")
+  clientEmail      String
+  clientPhone      String
+  clientAddress    String    @default("")
+  clientCity       String    @default("")
+  clientPostalCode String    @default("")
+
+  // Mac info
+  macModel         String
+  serialNumber     String    @default("")
+  faultType        String    @default("")
+  faultDescription String    @default("")
+
+  // Quote details
+  estimatedCost    Float     @default(0)
+  notes            String    @default("")
+  validUntil       DateTime?
+
+  // Status: DRAFT, SENT, ACCEPTED, REFUSED
+  status           String    @default("DRAFT")
+
+  // Metadata
+  location         String    @default("PARIS")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  sentAt           DateTime?
+
+  // Relation
+  createdById      String?
+  createdBy        User?     @relation(fields: [createdById], references: [id])
 }

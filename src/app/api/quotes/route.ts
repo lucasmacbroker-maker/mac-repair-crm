@@ -5,6 +5,17 @@ import { after } from "next/server";
 import { generateQuotePDF } from "@/lib/quote-pdf";
 import { sendQuoteEmail } from "@/lib/email";
 
+interface QuoteLine {
+  description: string;
+  faultType?: string;
+  amountTTC: number;
+}
+
+function totalHTfromLines(lines: QuoteLine[]): number {
+  const ttc = lines.reduce((s, l) => s + (l.amountTTC || 0), 0);
+  return Math.round((ttc / 1.2) * 100) / 100;
+}
+
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
@@ -49,13 +60,18 @@ export async function POST(request: Request) {
     const {
       clientFirstName, clientLastName, clientCompany, clientEmail, clientPhone,
       clientAddress, clientCity, clientPostalCode,
-      macModel, serialNumber, faultType, faultDescription,
-      estimatedCost, notes, validUntil, location, sendNow,
+      macModel, serialNumber,
+      lines = [],
+      notes, validUntil, location, sendNow,
     } = body;
 
     if (!clientFirstName || !clientLastName || !clientEmail || !clientPhone || !macModel) {
       return NextResponse.json({ error: "Informations client et modèle Mac requis" }, { status: 400 });
     }
+
+    const typedLines: QuoteLine[] = Array.isArray(lines) ? lines : [];
+    const estimatedCost = totalHTfromLines(typedLines);
+    const totalTTC = typedLines.reduce((s, l) => s + (l.amountTTC || 0), 0);
 
     const quote = await prisma.quote.create({
       data: {
@@ -69,9 +85,10 @@ export async function POST(request: Request) {
         clientPostalCode: clientPostalCode || "",
         macModel,
         serialNumber: serialNumber || "",
-        faultType: faultType || "",
-        faultDescription: faultDescription || "",
-        estimatedCost: parseFloat(String(estimatedCost)) || 0,
+        faultType: typedLines[0]?.faultType || "",
+        faultDescription: typedLines.map(l => l.description).filter(Boolean).join(" / "),
+        estimatedCost,
+        lines: typedLines as object[],
         notes: notes || "",
         validUntil: validUntil ? new Date(validUntil) : null,
         location: location || "PARIS",
@@ -95,14 +112,14 @@ export async function POST(request: Request) {
             clientPostalCode: quote.clientPostalCode,
             macModel: quote.macModel,
             serialNumber: quote.serialNumber,
-            faultType: quote.faultType || "Devis",
-            faultDescription: quote.faultDescription,
-            estimatedCost: quote.estimatedCost,
+            faultType: typedLines[0]?.faultType || "Devis",
+            faultDescription: typedLines.map(l => l.description).filter(Boolean).join(" / "),
+            estimatedCost,
             createdAt: quote.createdAt,
             token: quote.token,
           });
           const clientName = `${quote.clientFirstName} ${quote.clientLastName}`;
-          await sendQuoteEmail(quote.clientEmail, clientName, quote.token, quote.macModel, quote.estimatedCost, pdf, undefined, false, "", quote.location);
+          await sendQuoteEmail(quote.clientEmail, clientName, quote.token, quote.macModel, totalTTC, pdf, undefined, false, "", quote.location);
         } catch (err) {
           console.error("Failed to send quote email:", err);
         }

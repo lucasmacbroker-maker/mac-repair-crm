@@ -265,6 +265,7 @@ model Quote {
 
   // Quote details
   estimatedCost    Float     @default(0)
+  lines            Json      @default("[]")
   notes            String    @default("")
   validUntil       DateTime?
 

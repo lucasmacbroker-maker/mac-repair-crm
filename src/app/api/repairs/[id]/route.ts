@@ -138,6 +138,10 @@ export async function PUT(
       }
     }
 
+    if (body.devisLines !== undefined) {
+      data.devisLines = body.devisLines as object[];
+    }
+
     if (body.estimatedReturn !== undefined) {
       data.estimatedReturn = body.estimatedReturn
         ? new Date(body.estimatedReturn)

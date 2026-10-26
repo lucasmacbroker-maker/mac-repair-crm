@@ -98,6 +98,7 @@ interface Repair {
   paymentLink: string;
   estimatedCost: number;
   finalCost: number;
+  devisLines: { description: string; faultType?: string; amountTTC: number }[];
   estimatedReturn: string | null;
   appointmentDate: string | null;
   createdAt: string;
@@ -166,8 +167,10 @@ export default function RepairDetailPage() {
   const [returnTrackingAutoFilled, setReturnTrackingAutoFilled] = useState(false);
 
   // Devis inline edit
+  interface DevisLine { description: string; faultType: string; amountTTC: string; }
+  const emptyDevisLine = (): DevisLine => ({ description: "", faultType: "", amountTTC: "" });
   const [editingDevis, setEditingDevis] = useState(false);
-  const [devisTTC, setDevisTTC] = useState("");
+  const [devisLines, setDevisLines] = useState<DevisLine[]>([emptyDevisLine()]);
   const [savingDevis, setSavingDevis] = useState(false);
 
   // Attachments
@@ -306,14 +309,19 @@ export default function RepairDetailPage() {
   };
 
   const handleSaveDevis = async () => {
-    const ttc = parseFloat(devisTTC);
-    if (!ttc || ttc <= 0) return;
+    const typedLines = devisLines.map(l => ({ ...l, amountTTC: parseFloat(l.amountTTC) || 0 }));
+    const totalTTC = typedLines.reduce((s, l) => s + l.amountTTC, 0);
     setSavingDevis(true);
     try {
       const res = await fetch(`/api/repairs/${repairId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estimatedCost: Math.round((ttc / 1.2) * 100) / 100 }),
+        body: JSON.stringify({
+          estimatedCost: totalTTC,
+          devisLines: typedLines,
+          faultType: typedLines[0]?.faultType || repair!.faultType,
+          faultDescription: typedLines.map(l => l.description).filter(Boolean).join(" / "),
+        }),
       });
       if (!res.ok) throw new Error("Erreur");
       toast.success("Devis mis à jour ✓");
@@ -805,7 +813,13 @@ export default function RepairDetailPage() {
               <CardTitle>Devis estimatif</CardTitle>
               {!editingDevis ? (
                 <button
-                  onClick={() => { setDevisTTC(String(Math.round(repair.estimatedCost * 1.2 * 100) / 100)); setEditingDevis(true); }}
+                  onClick={() => {
+                    const existing = repair.devisLines && repair.devisLines.length > 0
+                      ? repair.devisLines.map(l => ({ description: l.description, faultType: l.faultType || "", amountTTC: String(l.amountTTC) }))
+                      : [emptyDevisLine()];
+                    setDevisLines(existing);
+                    setEditingDevis(true);
+                  }}
                   className="text-xs text-[#0071e3] hover:underline flex items-center gap-1"
                 >
                   <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -819,60 +833,113 @@ export default function RepairDetailPage() {
             </div>
           </CardHeader>
           {editingDevis ? (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-[#86868b] mb-1">Montant TTC (€)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={devisTTC}
-                  onChange={(e) => setDevisTTC(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3]"
-                  placeholder="Ex: 299.00"
-                  autoFocus
-                />
-              </div>
-              {parseFloat(devisTTC) > 0 && (
-                <div className="bg-[#f5f5f7] rounded-lg p-3 space-y-1 text-sm">
-                  <div className="flex justify-between text-[#86868b]">
-                    <span>HT</span>
-                    <span>{(Math.round(parseFloat(devisTTC) / 1.2 * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+            <div className="space-y-4">
+              {devisLines.map((line, i) => {
+                const ttcVal = parseFloat(line.amountTTC) || 0;
+                return (
+                  <div key={i} className="border border-gray-100 rounded-xl p-3 space-y-2 relative">
+                    {devisLines.length > 1 && (
+                      <button onClick={() => setDevisLines(devisLines.filter((_, j) => j !== i))} className="absolute top-2 right-2 text-red-400 hover:text-red-600">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    )}
+                    <div>
+                      <label className="block text-xs font-medium text-[#86868b] mb-1">Description</label>
+                      <input
+                        type="text"
+                        value={line.description}
+                        onChange={(e) => setDevisLines(devisLines.map((l, j) => j === i ? { ...l, description: e.target.value } : l))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3]"
+                        placeholder="Ex: Remplacement batterie"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[#86868b] mb-1">Type de panne</label>
+                      <select
+                        value={line.faultType}
+                        onChange={(e) => setDevisLines(devisLines.map((l, j) => j === i ? { ...l, faultType: e.target.value } : l))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3] bg-white"
+                      >
+                        <option value="">Sélectionner...</option>
+                        {FAULT_TYPES.map(f => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[#86868b] mb-1">Montant TTC (€)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={line.amountTTC}
+                        onChange={(e) => setDevisLines(devisLines.map((l, j) => j === i ? { ...l, amountTTC: e.target.value } : l))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:border-[#0071e3]"
+                        placeholder="Ex: 189.00"
+                      />
+                    </div>
+                    {ttcVal > 0 && (
+                      <p className="text-xs text-[#86868b]">HT : {(Math.round(ttcVal / 1.2 * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</p>
+                    )}
                   </div>
-                  <div className="flex justify-between text-[#86868b]">
-                    <span>TVA (20%)</span>
-                    <span>{(Math.round((parseFloat(devisTTC) - parseFloat(devisTTC) / 1.2) * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                );
+              })}
+              <button
+                onClick={() => setDevisLines([...devisLines, emptyDevisLine()])}
+                className="w-full border border-dashed border-[#0071e3] text-[#0071e3] text-sm py-2 rounded-xl hover:bg-blue-50 transition-colors"
+              >
+                + Ajouter une ligne
+              </button>
+              {/* Total */}
+              {devisLines.some(l => parseFloat(l.amountTTC) > 0) && (() => {
+                const totalTTC = devisLines.reduce((s, l) => s + (parseFloat(l.amountTTC) || 0), 0);
+                const totalHT = Math.round(totalTTC / 1.2 * 100) / 100;
+                const totalTVA = Math.round((totalTTC - totalHT) * 100) / 100;
+                return (
+                  <div className="bg-[#f5f5f7] rounded-xl p-3 space-y-1 text-sm">
+                    <div className="flex justify-between text-[#86868b]"><span>Total HT</span><span>{totalHT.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span></div>
+                    <div className="flex justify-between text-[#86868b]"><span>TVA (20%)</span><span>{totalTVA.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span></div>
+                    <div className="flex justify-between font-semibold text-[#1d1d1f] pt-1 border-t border-gray-200"><span>Total TTC</span><span>{totalTTC.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span></div>
                   </div>
-                  <div className="flex justify-between font-semibold text-[#1d1d1f] pt-1 border-t border-gray-200">
-                    <span>Total TTC</span>
-                    <span>{parseFloat(devisTTC).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
               <button
                 onClick={handleSaveDevis}
-                disabled={savingDevis || !parseFloat(devisTTC)}
+                disabled={savingDevis}
                 className="w-full bg-[#0071e3] text-white text-sm font-medium py-2 rounded-lg hover:bg-[#0077ed] disabled:opacity-50 transition-colors"
               >
-                {savingDevis ? "Sauvegarde..." : "Enregistrer"}
+                {savingDevis ? "Sauvegarde..." : "Enregistrer le devis"}
               </button>
             </div>
           ) : (
             <div className="space-y-1 text-sm">
-              {repair.estimatedCost > 0 ? (
+              {repair.devisLines && repair.devisLines.length > 0 ? (
                 <>
-                  <div className="flex justify-between text-[#86868b]">
-                    <span>Montant HT</span>
-                    <span>{repair.estimatedCost.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+                  <div className="overflow-x-auto mb-3">
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b border-gray-100">
+                        <th className="text-left text-xs font-medium text-[#86868b] pb-2">Description</th>
+                        <th className="text-left text-xs font-medium text-[#86868b] pb-2">Panne</th>
+                        <th className="text-right text-xs font-medium text-[#86868b] pb-2">TTC</th>
+                      </tr></thead>
+                      <tbody>
+                        {repair.devisLines.map((l, i) => (
+                          <tr key={i} className="border-b border-gray-50 last:border-0">
+                            <td className="py-2 text-[#1d1d1f]">{l.description || "—"}</td>
+                            <td className="py-2 text-[#86868b] text-xs">{l.faultType || "—"}</td>
+                            <td className="py-2 text-right font-medium">{l.amountTTC > 0 ? `${l.amountTTC.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="flex justify-between text-[#86868b]">
-                    <span>TVA (20%)</span>
-                    <span>{(repair.estimatedCost * 0.2).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-[#1d1d1f] text-base pt-2 border-t border-gray-100">
-                    <span>Total TTC</span>
-                    <span>{(repair.estimatedCost * 1.2).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
-                  </div>
+                  <div className="flex justify-between text-[#86868b] pt-1"><span>Total HT</span><span>{(Math.round(repair.estimatedCost / 1.2 * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span></div>
+                  <div className="flex justify-between text-[#86868b]"><span>TVA (20%)</span><span>{(Math.round((repair.estimatedCost - repair.estimatedCost / 1.2) * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span></div>
+                  <div className="flex justify-between font-semibold text-[#1d1d1f] text-base pt-2 border-t border-gray-100"><span>Total TTC</span><span>{repair.estimatedCost.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span></div>
+                </>
+              ) : repair.estimatedCost > 0 ? (
+                <>
+                  <div className="flex justify-between text-[#86868b]"><span>Montant HT</span><span>{(Math.round(repair.estimatedCost / 1.2 * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span></div>
+                  <div className="flex justify-between text-[#86868b]"><span>TVA (20%)</span><span>{(Math.round((repair.estimatedCost - repair.estimatedCost / 1.2) * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span></div>
+                  <div className="flex justify-between font-semibold text-[#1d1d1f] text-base pt-2 border-t border-gray-100"><span>Total TTC</span><span>{repair.estimatedCost.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span></div>
                 </>
               ) : (
                 <p className="text-[#86868b] text-xs">Aucun devis renseigné. Cliquez sur Modifier pour en ajouter un.</p>

@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       condition: m.condition,
       originalPrice: m.originalPrice,
       promoPrice: m.promoPrice,
+      photos: Array.isArray(m.photos) ? (m.photos as string[]) : [],
     }));
 
     // Also look up names for a personalised greeting (fallback to email prefix)

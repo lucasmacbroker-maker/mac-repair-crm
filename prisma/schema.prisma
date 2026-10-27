@@ -165,6 +165,7 @@ model MacBookForSale {
   promoPrice    Float    @default(0)
   status        String   @default("AVAILABLE") // AVAILABLE, SOLD, RESERVED
   notes         String   @default("")
+  photos        Json     @default("[]")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

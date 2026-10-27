@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-    const { model, year, specs, condition, originalPrice, promoPrice, status, notes } = await request.json();
+    const { model, year, specs, condition, originalPrice, promoPrice, status, notes, photos } = await request.json();
     if (!model) return NextResponse.json({ error: "Modèle requis" }, { status: 400 });
 
     const macbook = await prisma.macBookForSale.create({
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
         promoPrice: parseFloat(promoPrice) || 0,
         status: status || "AVAILABLE",
         notes: notes || "",
+        photos: Array.isArray(photos) ? photos : [],
       },
     });
     return NextResponse.json(macbook, { status: 201 });

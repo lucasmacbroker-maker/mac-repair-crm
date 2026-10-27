@@ -20,6 +20,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         promoPrice: body.promoPrice !== undefined ? parseFloat(body.promoPrice) : undefined,
         status: body.status,
         notes: body.notes,
+        ...(body.photos !== undefined ? { photos: body.photos } : {}),
       },
     });
     return NextResponse.json(macbook);

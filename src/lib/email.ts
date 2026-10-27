@@ -786,6 +786,7 @@ export interface MacBookPromoItem {
   condition: string;
   originalPrice: number;
   promoPrice: number;
+  photos?: string[];
 }
 
 export async function sendMacBookPromoEmail(
@@ -801,19 +802,26 @@ export async function sendMacBookPromoEmail(
   const macbookCards = macbooks.map(m => {
     const savings = m.originalPrice - m.promoPrice;
     const pct = Math.round((1 - m.promoPrice / m.originalPrice) * 100);
+    const photos = m.photos?.filter(Boolean) || [];
+    const photoHtml = photos.length > 0
+      ? `<img src="${photos[0]}" alt="${m.model}" style="width: 100%; max-height: 260px; object-fit: cover; border-radius: 12px; margin-bottom: 20px; display: block;" />`
+      : "";
     return `
-      <div style="border: 1px solid #e0e0e0; border-radius: 16px; padding: 24px; margin-bottom: 16px; background: #fff;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
-          <div style="flex: 1; min-width: 200px;">
-            <h3 style="font-size: 18px; font-weight: 700; color: #1d1d1f; margin: 0 0 4px;">${m.model}${m.year ? " " + m.year : ""}</h3>
-            <p style="font-size: 13px; color: #86868b; margin: 0 0 8px;">${m.specs}</p>
-            <span style="display: inline-block; background: #f5f5f7; color: #424245; font-size: 12px; padding: 3px 10px; border-radius: 20px;">${m.condition}</span>
-          </div>
-          <div style="text-align: right;">
-            ${pct > 0 ? `<span style="display: inline-block; background: #ff3b30; color: white; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; margin-bottom: 6px;">-${pct}%</span><br/>` : ""}
-            ${m.originalPrice > m.promoPrice ? `<span style="font-size: 14px; color: #86868b; text-decoration: line-through;">${m.originalPrice.toLocaleString("fr-FR")} €</span><br/>` : ""}
-            <span style="font-size: 26px; font-weight: 800; color: #0071e3;">${m.promoPrice.toLocaleString("fr-FR")} €</span>
-            ${savings > 0 ? `<br/><span style="font-size: 12px; color: #34c759; font-weight: 600;">Économie : ${savings.toLocaleString("fr-FR")} €</span>` : ""}
+      <div style="border: 1px solid #e0e0e0; border-radius: 16px; overflow: hidden; margin-bottom: 20px; background: #fff;">
+        ${photoHtml}
+        <div style="padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+            <div style="flex: 1; min-width: 180px;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #1d1d1f; margin: 0 0 4px;">${m.model}${m.year ? " " + m.year : ""}</h3>
+              ${m.specs ? `<p style="font-size: 13px; color: #86868b; margin: 0 0 8px; line-height: 1.5;">${m.specs}</p>` : ""}
+              <span style="display: inline-block; background: #f5f5f7; color: #424245; font-size: 12px; padding: 3px 10px; border-radius: 20px;">${m.condition}</span>
+            </div>
+            <div style="text-align: right; flex-shrink: 0;">
+              ${pct > 0 ? `<span style="display: inline-block; background: #ff3b30; color: white; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; margin-bottom: 6px;">-${pct}%</span><br/>` : ""}
+              ${m.originalPrice > m.promoPrice ? `<span style="font-size: 14px; color: #86868b; text-decoration: line-through;">${m.originalPrice.toLocaleString("fr-FR")} €</span><br/>` : ""}
+              <span style="font-size: 28px; font-weight: 800; color: #0071e3;">${m.promoPrice.toLocaleString("fr-FR")} €</span>
+              ${savings > 0 ? `<br/><span style="font-size: 12px; color: #34c759; font-weight: 600;">Économie : ${savings.toLocaleString("fr-FR")} €</span>` : ""}
+            </div>
           </div>
         </div>
       </div>`;

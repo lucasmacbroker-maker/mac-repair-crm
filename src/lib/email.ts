@@ -800,36 +800,65 @@ export async function sendMacBookPromoEmail(
     : 0;
 
   const macbookCards = macbooks.map(m => {
-    const savings = m.originalPrice - m.promoPrice;
-    const pct = Math.round((1 - m.promoPrice / m.originalPrice) * 100);
+    const savings = Math.round(m.originalPrice - m.promoPrice);
+    const pct = m.originalPrice > 0 ? Math.round((1 - m.promoPrice / m.originalPrice) * 100) : 0;
     const photos = m.photos?.filter(Boolean) || [];
     const photoHtml = photos.length > 0
-      ? `<img src="${photos[0]}" alt="${m.model}" style="width: 100%; max-height: 260px; object-fit: cover; border-radius: 12px; margin-bottom: 20px; display: block;" />`
+      ? `<img src="${photos[0]}" alt="${m.model}" width="560" style="width:100%;max-width:560px;height:auto;display:block;" />`
       : "";
     return `
-      <div style="border: 1px solid #e0e0e0; border-radius: 16px; overflow: hidden; margin-bottom: 20px; background: #fff;">
-        ${photoHtml}
-        <div style="padding: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
-            <div style="flex: 1; min-width: 180px;">
-              <h3 style="font-size: 18px; font-weight: 700; color: #1d1d1f; margin: 0 0 4px;">${m.model}${m.year ? " " + m.year : ""}</h3>
-              ${m.specs ? `<p style="font-size: 13px; color: #86868b; margin: 0 0 8px; line-height: 1.5;">${m.specs}</p>` : ""}
-              <span style="display: inline-block; background: #f5f5f7; color: #424245; font-size: 12px; padding: 3px 10px; border-radius: 20px;">${m.condition}</span>
-            </div>
-            <div style="text-align: right; flex-shrink: 0;">
-              ${pct > 0 ? `<span style="display: inline-block; background: #ff3b30; color: white; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; margin-bottom: 6px;">-${pct}%</span><br/>` : ""}
-              ${m.originalPrice > m.promoPrice ? `<span style="font-size: 14px; color: #86868b; text-decoration: line-through;">${m.originalPrice.toLocaleString("fr-FR")} €</span><br/>` : ""}
-              <span style="font-size: 28px; font-weight: 800; color: #0071e3;">${m.promoPrice.toLocaleString("fr-FR")} €</span>
-              ${savings > 0 ? `<br/><span style="font-size: 12px; color: #34c759; font-weight: 600;">Économie : ${savings.toLocaleString("fr-FR")} €</span>` : ""}
-            </div>
-          </div>
-        </div>
-      </div>`;
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e5e5;border-radius:16px;overflow:hidden;margin-bottom:24px;background:#ffffff;">
+        <tr>
+          <td style="padding:0;">
+            ${photoHtml}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 24px 8px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td>
+                  <p style="font-size:20px;font-weight:700;color:#1d1d1f;margin:0 0 6px;">${m.model}${m.year ? " " + m.year : ""}</p>
+                  ${m.specs ? `<p style="font-size:13px;color:#86868b;margin:0 0 10px;line-height:1.6;">${m.specs}</p>` : ""}
+                  <span style="display:inline-block;background:#f5f5f7;color:#424245;font-size:12px;padding:4px 12px;border-radius:20px;font-weight:500;">${m.condition}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 24px 24px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;border-radius:12px;">
+              <tr>
+                <td style="padding:16px 20px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td>
+                        ${pct > 0 ? `<span style="display:inline-block;background:#ff3b30;color:#fff;font-size:13px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:8px;">-${pct}%</span><br/>` : ""}
+                        ${m.originalPrice > m.promoPrice ? `<span style="font-size:14px;color:#86868b;text-decoration:line-through;">${m.originalPrice.toLocaleString("fr-FR")} €</span>` : ""}
+                      </td>
+                      <td style="text-align:right;vertical-align:middle;">
+                        <span style="font-size:32px;font-weight:800;color:#0071e3;white-space:nowrap;">${m.promoPrice.toLocaleString("fr-FR")} €</span>
+                      </td>
+                    </tr>
+                    ${savings > 0 ? `<tr><td colspan="2" style="padding-top:6px;"><span style="font-size:13px;color:#34c759;font-weight:600;">✓ Vous économisez ${savings.toLocaleString("fr-FR")} €</span></td></tr>` : ""}
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>`;
   }).join("");
 
+  // Capitalise first letter of name for greeting
+  const firstName = clientName.includes(" ")
+    ? clientName.split(" ")[0]
+    : clientName.charAt(0).toUpperCase() + clientName.slice(1);
+
   const subject = macbooks.length === 1
-    ? `🍎 Offre exclusive : ${macbooks[0].model}${discount > 0 ? ` à -${discount}%` : ""}`
-    : `🍎 Sélection MacBooks reconditionnés — Offres exclusives`;
+    ? `MacBook ${macbooks[0].model}${macbooks[0].year ? " " + macbooks[0].year : ""}${discount > 0 ? ` — -${discount}%` : ""} · Mac Place`
+    : `Votre sélection MacBooks reconditionnés · Mac Place`;
 
   try {
     const adminEmail = process.env.SMTP_USER || "lucas.macbroker@gmail.com";
@@ -838,30 +867,64 @@ export async function sendMacBookPromoEmail(
       to: email,
       bcc: adminEmail,
       subject,
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f7;">
-          <!-- Header -->
-          <div style="background: #1d1d1f; padding: 32px 40px; text-align: center; border-radius: 16px 16px 0 0;">
-            <h1 style="color: white; font-size: 26px; font-weight: 700; margin: 0 0 6px;">Mac Place</h1>
-            <p style="color: rgba(255,255,255,0.6); font-size: 14px; margin: 0;">Vente de MacBooks reconditionnés</p>
-          </div>
-          <!-- Body -->
-          <div style="background: white; padding: 40px; border-radius: 0 0 16px 16px;">
-            <p style="font-size: 16px; color: #1d1d1f; margin: 0 0 8px;">Bonjour ${clientName},</p>
-            <p style="font-size: 15px; color: #424245; margin: 0 0 24px; line-height: 1.6;">
+      html: `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f0f0f5;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f5;padding:32px 16px;">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#1d1d1f;padding:32px 40px;text-align:center;border-radius:16px 16px 0 0;">
+            <p style="font-size:28px;font-weight:800;color:#ffffff;margin:0 0 4px;letter-spacing:-0.5px;">Mac Place</p>
+            <p style="font-size:13px;color:rgba(255,255,255,0.5);margin:0;text-transform:uppercase;letter-spacing:1px;">MacBooks reconditionnés</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="background:#ffffff;padding:36px 40px 40px;border-radius:0 0 16px 16px;">
+
+            <p style="font-size:17px;font-weight:600;color:#1d1d1f;margin:0 0 8px;">Bonjour ${firstName},</p>
+            <p style="font-size:15px;color:#424245;margin:0 0 32px;line-height:1.7;">
               ${customMessage || "Nous avons sélectionné pour vous des MacBooks reconditionnés à des prix exceptionnels. Chaque appareil est soigneusement vérifié et testé par nos techniciens."}
             </p>
+
             ${macbookCards}
-            <div style="background: #f5f5f7; border-radius: 12px; padding: 20px; margin-top: 24px; text-align: center;">
-              <p style="font-size: 14px; color: #424245; margin: 0 0 8px;">Intéressé(e) ? Contactez-nous !</p>
-              <p style="font-size: 15px; font-weight: 600; color: #1d1d1f; margin: 0;">📞 07 82 71 21 23 &nbsp;·&nbsp; ✉️ contact@macplace.fr</p>
-            </div>
-            <p style="font-size: 13px; color: #86868b; margin: 24px 0 0; text-align: center; line-height: 1.6;">
+
+            <!-- CTA -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+              <tr>
+                <td style="background:#1d1d1f;border-radius:12px;padding:24px;text-align:center;">
+                  <p style="font-size:15px;font-weight:600;color:#ffffff;margin:0 0 12px;">Intéressé(e) par cette offre ?</p>
+                  <p style="font-size:14px;color:rgba(255,255,255,0.7);margin:0 0 4px;">📞 &nbsp;<a href="tel:0782712123" style="color:#ffffff;text-decoration:none;font-weight:600;">07 82 71 21 23</a></p>
+                  <p style="font-size:14px;color:rgba(255,255,255,0.7);margin:0;">✉️ &nbsp;<a href="mailto:contact@macplace.fr" style="color:#64d2ff;text-decoration:none;font-weight:600;">contact@macplace.fr</a></p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:20px 40px;text-align:center;">
+            <p style="font-size:12px;color:#86868b;margin:0;line-height:1.7;">
               ${COMPANY} — 39-41 rue du 11 novembre 1918, 94700 Maisons-Alfort<br/>
               <em>Offre valable sous réserve de disponibilité</em>
             </p>
-          </div>
-        </div>`,
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`,
     });
     return true;
   } catch (error) {

@@ -244,9 +244,11 @@ export async function sendPromoEmail(
   let sent = 0;
   for (const recipient of recipients) {
     try {
+      const adminEmail = process.env.SMTP_USER || "lucas.macbroker@gmail.com";
       await transporter.sendMail({
         from: FROM,
         to: recipient.email,
+        bcc: adminEmail,
         subject,
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
@@ -822,9 +824,11 @@ export async function sendMacBookPromoEmail(
     : `🍎 Sélection MacBooks reconditionnés — Offres exclusives`;
 
   try {
+    const adminEmail = process.env.SMTP_USER || "lucas.macbroker@gmail.com";
     await transporter.sendMail({
       from: FROM,
       to: email,
+      bcc: adminEmail,
       subject,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f7;">

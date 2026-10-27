@@ -776,3 +776,84 @@ export async function sendReturnShipmentEmail(
     return false;
   }
 }
+
+export interface MacBookPromoItem {
+  model: string;
+  year?: string;
+  specs: string;
+  condition: string;
+  originalPrice: number;
+  promoPrice: number;
+}
+
+export async function sendMacBookPromoEmail(
+  email: string,
+  clientName: string,
+  macbooks: MacBookPromoItem[],
+  customMessage?: string,
+) {
+  const discount = macbooks.length === 1
+    ? Math.round((1 - macbooks[0].promoPrice / macbooks[0].originalPrice) * 100)
+    : 0;
+
+  const macbookCards = macbooks.map(m => {
+    const savings = m.originalPrice - m.promoPrice;
+    const pct = Math.round((1 - m.promoPrice / m.originalPrice) * 100);
+    return `
+      <div style="border: 1px solid #e0e0e0; border-radius: 16px; padding: 24px; margin-bottom: 16px; background: #fff;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+          <div style="flex: 1; min-width: 200px;">
+            <h3 style="font-size: 18px; font-weight: 700; color: #1d1d1f; margin: 0 0 4px;">${m.model}${m.year ? " " + m.year : ""}</h3>
+            <p style="font-size: 13px; color: #86868b; margin: 0 0 8px;">${m.specs}</p>
+            <span style="display: inline-block; background: #f5f5f7; color: #424245; font-size: 12px; padding: 3px 10px; border-radius: 20px;">${m.condition}</span>
+          </div>
+          <div style="text-align: right;">
+            ${pct > 0 ? `<span style="display: inline-block; background: #ff3b30; color: white; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; margin-bottom: 6px;">-${pct}%</span><br/>` : ""}
+            ${m.originalPrice > m.promoPrice ? `<span style="font-size: 14px; color: #86868b; text-decoration: line-through;">${m.originalPrice.toLocaleString("fr-FR")} €</span><br/>` : ""}
+            <span style="font-size: 26px; font-weight: 800; color: #0071e3;">${m.promoPrice.toLocaleString("fr-FR")} €</span>
+            ${savings > 0 ? `<br/><span style="font-size: 12px; color: #34c759; font-weight: 600;">Économie : ${savings.toLocaleString("fr-FR")} €</span>` : ""}
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+
+  const subject = macbooks.length === 1
+    ? `🍎 Offre exclusive : ${macbooks[0].model}${discount > 0 ? ` à -${discount}%` : ""}`
+    : `🍎 Sélection MacBooks reconditionnés — Offres exclusives`;
+
+  try {
+    await transporter.sendMail({
+      from: FROM,
+      to: email,
+      subject,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f7;">
+          <!-- Header -->
+          <div style="background: #1d1d1f; padding: 32px 40px; text-align: center; border-radius: 16px 16px 0 0;">
+            <h1 style="color: white; font-size: 26px; font-weight: 700; margin: 0 0 6px;">Mac Place</h1>
+            <p style="color: rgba(255,255,255,0.6); font-size: 14px; margin: 0;">Vente de MacBooks reconditionnés</p>
+          </div>
+          <!-- Body -->
+          <div style="background: white; padding: 40px; border-radius: 0 0 16px 16px;">
+            <p style="font-size: 16px; color: #1d1d1f; margin: 0 0 8px;">Bonjour ${clientName},</p>
+            <p style="font-size: 15px; color: #424245; margin: 0 0 24px; line-height: 1.6;">
+              ${customMessage || "Nous avons sélectionné pour vous des MacBooks reconditionnés à des prix exceptionnels. Chaque appareil est soigneusement vérifié et testé par nos techniciens."}
+            </p>
+            ${macbookCards}
+            <div style="background: #f5f5f7; border-radius: 12px; padding: 20px; margin-top: 24px; text-align: center;">
+              <p style="font-size: 14px; color: #424245; margin: 0 0 8px;">Intéressé(e) ? Contactez-nous !</p>
+              <p style="font-size: 15px; font-weight: 600; color: #1d1d1f; margin: 0;">📞 07 82 71 21 23 &nbsp;·&nbsp; ✉️ contact@macplace.fr</p>
+            </div>
+            <p style="font-size: 13px; color: #86868b; margin: 24px 0 0; text-align: center; line-height: 1.6;">
+              ${COMPANY} — 39-41 rue du 11 novembre 1918, 94700 Maisons-Alfort<br/>
+              <em>Offre valable sous réserve de disponibilité</em>
+            </p>
+          </div>
+        </div>`,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send promo email:", error);
+    return false;
+  }
+}

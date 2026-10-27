@@ -25,6 +25,17 @@ interface Part {
   sellPrice: number;
 }
 
+interface MacBook {
+  id: string;
+  model: string;
+  year: string;
+  specs: string;
+  condition: string;
+  originalPrice: number;
+  promoPrice: number;
+  status: string;
+}
+
 interface SelectedProduct {
   id: string;
   name: string;
@@ -36,9 +47,14 @@ export default function ClientsPage() {
   const toast = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
+  const [macbooks, setMacbooks] = useState<MacBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showPromoModal, setShowPromoModal] = useState(false);
+  const [showMacPromoModal, setShowMacPromoModal] = useState(false);
+  const [selectedMacbooks, setSelectedMacbooks] = useState<Set<string>>(new Set());
+  const [macPromoMessage, setMacPromoMessage] = useState("");
+  const [sendingMacPromo, setSendingMacPromo] = useState(false);
 
   // Promo form state
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
@@ -68,15 +84,24 @@ export default function ClientsPage() {
       const res = await fetch("/api/stock");
       const data = await res.json();
       setParts(Array.isArray(data) ? data.filter((p: Part) => p.quantity > 0) : []);
-    } catch {
-      // silent
-    }
+    } catch { /* silent */ }
+  }, []);
+
+  const fetchMacbooks = useCallback(async () => {
+    try {
+      const res = await fetch("/api/macbooks");
+      if (res.ok) {
+        const data = await res.json();
+        setMacbooks(Array.isArray(data) ? data.filter((m: MacBook) => m.status === "AVAILABLE") : []);
+      }
+    } catch { /* silent */ }
   }, []);
 
   useEffect(() => {
     fetchClients();
     fetchParts();
-  }, [fetchClients, fetchParts]);
+    fetchMacbooks();
+  }, [fetchClients, fetchParts, fetchMacbooks]);
 
   const filtered = clients.filter((c) => {
     const q = search.toLowerCase();
@@ -138,6 +163,31 @@ export default function ClientsPage() {
     );
   };
 
+  const sendMacPromo = async () => {
+    if (selectedMacbooks.size === 0) { toast.error("Sélectionnez au moins un MacBook"); return; }
+    setSendingMacPromo(true);
+    try {
+      const res = await fetch("/api/macbooks/promo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientEmails: Array.from(selectedClients),
+          macbookIds: Array.from(selectedMacbooks),
+          customMessage: macPromoMessage,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Promo envoyée à ${data.sent} client(s)`);
+        setShowMacPromoModal(false);
+        setSelectedMacbooks(new Set());
+        setMacPromoMessage("");
+      } else {
+        toast.error("Erreur lors de l'envoi");
+      }
+    } catch { toast.error("Erreur lors de l'envoi"); } finally { setSendingMacPromo(false); }
+  };
+
   const sendPromo = async () => {
     if (selectedProducts.length === 0) {
       toast.error("Sélectionnez au moins un produit");
@@ -186,12 +236,20 @@ export default function ClientsPage() {
           <p className="text-sm text-gray-500 mt-1">{clients.length} client(s) au total</p>
         </div>
         {selectedClients.size > 0 && (
-          <Button onClick={openPromoModal}>
-            <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            Envoyer une promo ({selectedClients.size})
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => { setSelectedMacbooks(new Set()); setMacPromoMessage(""); setShowMacPromoModal(true); }}>
+              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Promo MacBook ({selectedClients.size})
+            </Button>
+            <Button onClick={openPromoModal}>
+              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Promo stock ({selectedClients.size})
+            </Button>
+          </div>
         )}
       </div>
 
@@ -254,6 +312,71 @@ export default function ClientsPage() {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* MacBook Promo Modal */}
+      {showMacPromoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Promo MacBook</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{selectedClients.size} destinataire(s)</p>
+              </div>
+              <button onClick={() => setShowMacPromoModal(false)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Message personnalisé (optionnel)</label>
+                <textarea value={macPromoMessage} onChange={e => setMacPromoMessage(e.target.value)} rows={3}
+                  className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="Ex: Offre exclusive réservée à nos clients fidèles…" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">MacBooks disponibles à la vente</label>
+                {macbooks.length === 0 ? (
+                  <p className="text-sm text-gray-400">Aucun MacBook disponible. Ajoutez-en depuis le module Stock.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {macbooks.map(m => {
+                      const selected = selectedMacbooks.has(m.id);
+                      const saving = m.originalPrice > m.promoPrice ? Math.round((1 - m.promoPrice / m.originalPrice) * 100) : 0;
+                      return (
+                        <div key={m.id}
+                          onClick={() => setSelectedMacbooks(prev => { const n = new Set(prev); if (n.has(m.id)) n.delete(m.id); else n.add(m.id); return n; })}
+                          className={`border rounded-xl p-3 cursor-pointer transition-colors ${selected ? "border-blue-300 bg-blue-50/50" : "border-gray-200 hover:border-gray-300"}`}>
+                          <div className="flex items-start gap-3">
+                            <input type="checkbox" checked={selected} onChange={() => {}} className="rounded border-gray-300 text-blue-600 mt-0.5" onClick={e => e.stopPropagation()} />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm text-gray-900">{m.model}{m.year ? ` ${m.year}` : ""}</p>
+                              {m.specs && <p className="text-xs text-gray-400 mt-0.5 truncate">{m.specs}</p>}
+                              <p className="text-xs text-gray-400">{m.condition}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              {m.originalPrice > m.promoPrice && (
+                                <p className="text-xs text-gray-400 line-through">{m.originalPrice.toLocaleString("fr-FR")} €</p>
+                              )}
+                              <p className="text-sm font-bold text-blue-600">{m.promoPrice.toLocaleString("fr-FR")} €</p>
+                              {saving > 0 && <p className="text-xs text-green-600 font-medium">-{saving}%</p>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
+              <button onClick={() => setShowMacPromoModal(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">Annuler</button>
+              <Button onClick={sendMacPromo} disabled={sendingMacPromo || selectedMacbooks.size === 0}>
+                {sendingMacPromo ? "Envoi…" : `Envoyer à ${selectedClients.size} client(s)`}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Promo Modal */}

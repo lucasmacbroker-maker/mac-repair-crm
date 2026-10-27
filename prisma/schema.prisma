@@ -155,6 +155,20 @@ model Client {
   createdAt DateTime @default(now())
 }
 
+model MacBookForSale {
+  id            String   @id @default(uuid())
+  model         String
+  year          String   @default("")
+  specs         String   @default("")
+  condition     String   @default("Très bon état")
+  originalPrice Float    @default(0)
+  promoPrice    Float    @default(0)
+  status        String   @default("AVAILABLE") // AVAILABLE, SOLD, RESERVED
+  notes         String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 model RepairAttachment {
   id         String   @id @default(uuid())
   repairId   String

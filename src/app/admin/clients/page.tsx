@@ -171,7 +171,9 @@ export default function ClientsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clientEmails: Array.from(selectedClients),
+          clientContacts: clients
+            .filter(c => selectedClients.has(c.email))
+            .map(c => ({ email: c.email, name: `${c.firstName} ${c.lastName}`.trim() })),
           macbookIds: Array.from(selectedMacbooks),
           customMessage: macPromoMessage,
         }),

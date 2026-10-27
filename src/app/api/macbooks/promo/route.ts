@@ -8,8 +8,8 @@ export async function POST(request: Request) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-    const { clientEmails, macbookIds, customMessage } = await request.json();
-    if (!clientEmails?.length || !macbookIds?.length) {
+    const { clientContacts, macbookIds, customMessage } = await request.json();
+    if (!clientContacts?.length || !macbookIds?.length) {
       return NextResponse.json({ error: "Clients et MacBooks requis" }, { status: 400 });
     }
 
@@ -25,16 +25,11 @@ export async function POST(request: Request) {
       photos: Array.isArray(m.photos) ? (m.photos as string[]) : [],
     }));
 
-    // Also look up names for a personalised greeting (fallback to email prefix)
-    const dbClients = await prisma.client.findMany({ where: { email: { in: clientEmails } } });
-    const nameMap = new Map(dbClients.map(c => [c.email.toLowerCase(), c.name]));
-
     let sent = 0;
     let failed = 0;
-    for (const email of clientEmails as string[]) {
-      const name = nameMap.get(email.toLowerCase()) || email.split("@")[0];
-      const ok = await sendMacBookPromoEmail(email, name, promoItems, customMessage);
-      console.log(`Promo MacBook → ${email}: ${ok ? "OK" : "FAILED"}`);
+    for (const contact of clientContacts as { email: string; name: string }[]) {
+      const ok = await sendMacBookPromoEmail(contact.email, contact.name, promoItems, customMessage);
+      console.log(`Promo MacBook → ${contact.email}: ${ok ? "OK" : "FAILED"}`);
       if (ok) sent++; else failed++;
     }
 

@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const FROM = process.env.SMTP_FROM || "Mac Place <lucas.macbroker@gmail.com>";
 const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME || "Mac Place";
-const ADDR = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "";
+const ADDR = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "39-41 rue du 11 novembre 1918, 94700 Maisons-Alfort";
 
 const LOCATION_INFO: Record<string, { address: string; phone: string }> = {
   PARIS: { address: "39-41 rue du 11 novembre 1918, 94700 Maisons-Alfort", phone: "07 82 71 21 23" },
@@ -646,7 +646,7 @@ export async function sendPostalRepairEmail(
 
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
           <p style="color: #86868b; font-size: 12px;">
-            ${COMPANY} — 5, rue Paul Vaillant Couturier, 94700 Maisons Alfort<br/>
+            ${COMPANY} — 39-41 rue du 11 novembre 1918, 94700 Maisons-Alfort<br/>
             07 82 71 21 23 — contact@macplace.fr
           </p>
         </div>
@@ -766,7 +766,7 @@ export async function sendReturnShipmentEmail(
 
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
           <p style="color: #86868b; font-size: 12px;">
-            ${COMPANY} — 5, rue Paul Vaillant Couturier, 94700 Maisons Alfort<br/>
+            ${COMPANY} — 39-41 rue du 11 novembre 1918, 94700 Maisons-Alfort<br/>
             07 82 71 21 23 — contact@macplace.fr
           </p>
         </div>

@@ -742,7 +742,7 @@ export default function RepairDetailPage() {
             {repair.repairType === "POSTAL" && (
               <div className="pt-2 border-t border-gray-100">
                 <p className="text-xs text-[#86868b] mb-2">Adresse de livraison Mac Place :</p>
-                <p className="text-xs text-[#424245] font-mono mb-3">5, rue Paul Vaillant Couturier<br/>94700 Maisons Alfort</p>
+                <p className="text-xs text-[#424245] font-mono mb-3">39-41 rue du 11 novembre 1918<br/>94700 Maisons-Alfort</p>
                 <a
                   href="https://pro.packlink.fr/private/shipments/new"
                   target="_blank"

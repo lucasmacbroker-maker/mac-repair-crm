@@ -136,7 +136,7 @@ export async function POST(
 
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
           <p style="color: #86868b; font-size: 12px;">
-            ${COMPANY} — 5, rue Paul Vaillant Couturier, 94700 Maisons Alfort<br/>
+            ${COMPANY} — 39-41 rue du 11 novembre 1918, 94700 Maisons-Alfort<br/>
             07 82 71 21 23 — contact@macplace.fr
           </p>
         </div>

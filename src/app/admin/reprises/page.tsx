@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { PageLoader } from "@/components/ui/Loader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { BuybackStatusBadge } from "@/components/ui/BuybackStatusBadge";
 import { dropOffLabel, formatEuro, paymentDeadline } from "@/lib/buyback";
 
@@ -70,6 +73,9 @@ export default function BuybacksPage() {
   const [setupRequired, setSetupRequired] = useState(false);
   const [settingUp, setSettingUp] = useState(false);
   const [setupError, setSetupError] = useState("");
+  const [toDelete, setToDelete] = useState<BuybackRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const toast = useToast();
 
   const load = useCallback(async () => {
     const params = new URLSearchParams({ group });
@@ -89,6 +95,22 @@ export default function BuybacksPage() {
     const t = setTimeout(load, search ? 300 : 0);
     return () => clearTimeout(t);
   }, [load, search]);
+
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/reprises/${toDelete.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Suppression impossible");
+      toast.success(`Reprise ${toDelete.reference} supprimée`);
+      setRows((r) => r.filter((x) => x.id !== toDelete.id));
+      setToDelete(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Suppression impossible");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const toPay = rows.filter((r) => r.receivedAt && ["RECEIVED", "CHECKING", "VALIDATED"].includes(r.status)).length;
   const toPlan = rows.filter((r) => r.status === "PENDING").length;
@@ -178,11 +200,12 @@ export default function BuybacksPage() {
                 <th className="px-5 py-3 font-medium">Remise</th>
                 <th className="px-5 py-3 font-medium">Statut</th>
                 <th className="px-5 py-3 font-medium">Payer avant</th>
+                <th className="w-12 px-3 py-3"><span className="sr-only">Supprimer</span></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((b) => (
-                <tr key={b.id} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={b.id} className="group border-b border-gray-50 hover:bg-gray-50">
                   <td className="px-5 py-3">
                     <Link href={`/admin/reprises/${b.id}`} className="font-medium text-[#0071e3] hover:underline">
                       {b.reference}
@@ -216,11 +239,40 @@ export default function BuybacksPage() {
                   <td className="px-5 py-3">
                     <Deadline b={b} />
                   </td>
+                  <td className="px-3 py-3 text-right">
+                    <button
+                      onClick={() => setToDelete(b)}
+                      className="rounded-md p-1.5 text-gray-300 transition-colors hover:bg-red-50 hover:text-red-600 group-hover:text-red-400"
+                      title="Supprimer"
+                      aria-label={`Supprimer la reprise ${b.reference}`}
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </Card>
+      )}
+
+      {toDelete && (
+        <Modal isOpen={!!toDelete} title={`Supprimer la reprise ${toDelete.reference} ?`} onClose={() => setToDelete(null)}>
+          <p className="mb-6 text-sm text-[#424245]">
+            {toDelete.clientFirstName} {toDelete.clientLastName} — {toDelete.macModel}. Cette action est irréversible : la demande, ses notes,
+            son historique et l&apos;IBAN enregistré seront effacés, et le lien de suivi du client ne fonctionnera plus.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" size="sm" onClick={() => setToDelete(null)}>
+              Annuler
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleDelete} disabled={deleting} className="!bg-red-500 hover:!bg-red-600">
+              {deleting ? "Suppression…" : "Supprimer"}
+            </Button>
+          </div>
+        </Modal>
       )}
     </div>
   );

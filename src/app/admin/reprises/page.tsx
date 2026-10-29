@@ -67,6 +67,9 @@ export default function BuybacksPage() {
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<BuybackRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [setupRequired, setSetupRequired] = useState(false);
+  const [settingUp, setSettingUp] = useState(false);
+  const [setupError, setSetupError] = useState("");
 
   const load = useCallback(async () => {
     const params = new URLSearchParams({ group });
@@ -76,6 +79,7 @@ export default function BuybacksPage() {
       const res = await fetch(`/api/reprises?${params}`);
       const data = await res.json();
       setRows(data.buybacks || []);
+      setSetupRequired(Boolean(data.setupRequired));
     } finally {
       setLoading(false);
     }
@@ -126,9 +130,39 @@ export default function BuybacksPage() {
         </div>
       </div>
 
+      {setupRequired && (
+        <Card>
+          <h2 className="text-lg font-semibold text-gray-900">Activer le module Reprises</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Les tables des reprises n&apos;existent pas encore dans la base de données. Ce bouton les crée une fois pour toutes. Il ne modifie
+            ni les réparations, ni les clients, ni aucune autre donnée.
+          </p>
+          {setupError && <p className="mt-3 text-sm text-red-600">{setupError}</p>}
+          <button
+            disabled={settingUp}
+            onClick={async () => {
+              setSettingUp(true);
+              setSetupError("");
+              const res = await fetch("/api/reprises/setup", { method: "POST" });
+              const data = await res.json().catch(() => ({}));
+              setSettingUp(false);
+              if (!res.ok) {
+                setSetupError(data.error || "Création impossible");
+                return;
+              }
+              setLoading(true);
+              load();
+            }}
+            className="mt-4 rounded-lg bg-[#0071e3] px-4 py-2 text-sm font-medium text-white hover:bg-[#0077ED] disabled:opacity-50"
+          >
+            {settingUp ? "Création en cours…" : "Créer les tables des reprises"}
+          </button>
+        </Card>
+      )}
+
       {loading ? (
         <PageLoader />
-      ) : rows.length === 0 ? (
+      ) : setupRequired ? null : rows.length === 0 ? (
         <Card>
           <EmptyState title={group === "active" ? "Aucune reprise en cours" : "Aucune reprise clôturée"} description="Les demandes envoyées depuis le site de reprise apparaissent ici." />
         </Card>

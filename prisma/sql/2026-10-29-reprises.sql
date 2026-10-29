@@ -1,5 +1,5 @@
 -- Module « Reprises » : création des 3 nouvelles tables.
--- À exécuter UNE SEULE FOIS dans la console SQL de Neon (base du CRM).
+-- Peut être relancé sans risque (chaque étape est ignorée si déjà faite). À exécuter dans la console SQL de Neon (base du CRM).
 -- Script uniquement additif : aucune table existante n'est modifiée ni supprimée.
 -- Équivalent de `npx prisma db push` pour les modèles Buyback, BuybackStatusChange et BuybackNote.
 
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS "Buyback" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "Buyback_pkey" PRIMARY KEY ("id")
-);
+  );
 
 CREATE TABLE IF NOT EXISTS "BuybackStatusChange" (
     "id" TEXT NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS "BuybackStatusChange" (
     "toStatus" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "BuybackStatusChange_pkey" PRIMARY KEY ("id")
-);
+  );
 
 CREATE TABLE IF NOT EXISTS "BuybackNote" (
     "id" TEXT NOT NULL,
@@ -66,12 +66,32 @@ CREATE TABLE IF NOT EXISTS "BuybackNote" (
     "isInternal" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "BuybackNote_pkey" PRIMARY KEY ("id")
-);
+  );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "Buyback_token_key" ON "Buyback"("token");
+
 CREATE UNIQUE INDEX IF NOT EXISTS "Buyback_reference_key" ON "Buyback"("reference");
 
-ALTER TABLE "BuybackStatusChange" ADD CONSTRAINT "BuybackStatusChange_buybackId_fkey" FOREIGN KEY ("buybackId") REFERENCES "Buyback"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "BuybackStatusChange" ADD CONSTRAINT "BuybackStatusChange_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "BuybackNote" ADD CONSTRAINT "BuybackNote_buybackId_fkey" FOREIGN KEY ("buybackId") REFERENCES "Buyback"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "BuybackNote" ADD CONSTRAINT "BuybackNote_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'BuybackStatusChange_buybackId_fkey') THEN
+    ALTER TABLE "BuybackStatusChange" ADD CONSTRAINT "BuybackStatusChange_buybackId_fkey" FOREIGN KEY ("buybackId") REFERENCES "Buyback"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'BuybackStatusChange_userId_fkey') THEN
+    ALTER TABLE "BuybackStatusChange" ADD CONSTRAINT "BuybackStatusChange_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'BuybackNote_buybackId_fkey') THEN
+    ALTER TABLE "BuybackNote" ADD CONSTRAINT "BuybackNote_buybackId_fkey" FOREIGN KEY ("buybackId") REFERENCES "Buyback"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'BuybackNote_userId_fkey') THEN
+    ALTER TABLE "BuybackNote" ADD CONSTRAINT "BuybackNote_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { BUYBACK_CLOSED_STATUSES } from "@/lib/buyback";
+import { isMissingTableError } from "@/lib/buyback-setup";
 
 /** Liste des reprises pour l'administration. L'IBAN n'est jamais renvoyé ici. */
 export async function GET(request: Request) {
@@ -29,7 +30,9 @@ export async function GET(request: Request) {
     ];
   }
 
-  const buybacks = await prisma.buyback.findMany({
+  let buybacks;
+  try {
+  buybacks = await prisma.buyback.findMany({
     where,
     orderBy: { createdAt: "desc" },
     take: 300,
@@ -54,6 +57,11 @@ export async function GET(request: Request) {
       createdAt: true,
     },
   });
+  } catch (e) {
+    // Tables pas encore créées : la page propose de les créer.
+    if (isMissingTableError(e)) return NextResponse.json({ buybacks: [], setupRequired: true });
+    throw e;
+  }
 
   return NextResponse.json({ buybacks });
 }

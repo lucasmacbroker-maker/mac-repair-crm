@@ -23,6 +23,9 @@ model User {
   statusChanges StatusChange[]
   repairNotes   RepairNote[]
   quotes        Quote[]
+
+  buybackStatusChanges BuybackStatusChange[]
+  buybackNotes         BuybackNote[]
 }
 
 model Repair {
@@ -297,4 +300,90 @@ model Quote {
   // Relation
   createdById      String?
   createdBy        User?     @relation(fields: [createdById], references: [id])
+}
+
+// ─── Reprises (rachat de Mac) ─────────────────────────────────────────
+// Demandes envoyées par le site reprise.macplace.fr. Fonctionnement calqué
+// sur les réparations : statuts, notes, historique et portail client par token.
+
+model Buyback {
+  id        String @id @default(uuid())
+  token     String @unique @default(uuid())
+  reference String @unique // RP-AAAAMMJJ-XXXX, affichée au client
+
+  // Client
+  clientFirstName  String
+  clientLastName   String
+  clientEmail      String
+  clientPhone      String
+  clientAddress    String @default("")
+  clientCity       String @default("")
+  clientPostalCode String @default("")
+
+  // Mac déclaré par le client
+  macFamily     String
+  macModel      String
+  configuration String  @default("")
+  configManual  Boolean @default(false) // configuration saisie à la main, offre à confirmer
+  condition     String // libellé de l'état déclaré
+  fault         String  @default("") // panne déclarée (état « En panne »)
+  battery       String  @default("")
+  charger       String  @default("")
+  serialNumber  String  @default("")
+
+  // Offre
+  offerAmount        Float
+  counterOfferAmount Float?
+  counterOfferReason String  @default("")
+  counterOfferStatus String  @default("") // PENDING, ACCEPTED, REFUSED
+  finalAmount        Float   @default(0)
+
+  // Remise : POSTAL (bordereau créé par MacPlace) ou LOCAL (dépôt à l'atelier sur RDV)
+  dropOffMode     String
+  requestedDate   DateTime?
+  requestedSlot   String    @default("")
+  appointmentDate DateTime?
+
+  // Envoi (POSTAL)
+  inboundTracking String @default("")
+  carrier         String @default("")
+  trackingLink    String @default("")
+  labelUrl        String @default("")
+
+  // Paiement — l'IBAN est chiffré (AES-256-GCM, clé BUYBACK_ENCRYPTION_KEY)
+  ibanEncrypted String @default("")
+  ibanLast4     String @default("")
+  accountHolder String @default("")
+
+  status     String    @default("PENDING")
+  receivedAt DateTime? // départ du délai de paiement de 48 h
+  paidAt     DateTime?
+  closedAt   DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  statusChanges BuybackStatusChange[]
+  notes         BuybackNote[]
+}
+
+model BuybackStatusChange {
+  id         String   @id @default(uuid())
+  buybackId  String
+  buyback    Buyback  @relation(fields: [buybackId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  fromStatus String
+  toStatus   String
+  createdAt  DateTime @default(now())
+}
+
+model BuybackNote {
+  id         String   @id @default(uuid())
+  buybackId  String
+  buyback    Buyback  @relation(fields: [buybackId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  content    String
+  isInternal Boolean  @default(true)
+  createdAt  DateTime @default(now())
 }

@@ -280,7 +280,7 @@ export default function BuybackTrackingPage() {
             </p>
           )}
           <Line label="Adresse" value={ATELIER} />
-          <p className="mt-3 text-sm text-[#424245]">Venez avec votre Mac effacé et déconnecté d&apos;iCloud, et son chargeur.</p>
+          <p className="mt-3 text-sm text-[#424245]">Venez avec votre Mac effacé et déconnecté d&apos;iCloud, son chargeur et une pièce d&apos;identité.</p>
         </Section>
       )}
 

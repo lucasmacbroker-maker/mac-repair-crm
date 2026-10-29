@@ -100,7 +100,7 @@ export function sendBuybackConfirmationEmail(b: BuybackEmailData) {
       ? p(
           `Vous avez choisi de déposer votre Mac à l'atelier${
             b.requestedDate ? `, idéalement le <strong>${dateFr(b.requestedDate)}</strong>${b.requestedSlot ? ` (${esc(b.requestedSlot).toLowerCase()})` : ""}` : ""
-          }. Nous vous appelons pour confirmer l'heure du rendez-vous. Pensez à venir avec votre pièce d'identité.`,
+          }. Nous vous appelons pour confirmer l'heure du rendez-vous.`,
         )
       : p("Nous vous envoyons votre bordereau d'expédition prépayé par e-mail très prochainement. Vous pourrez suivre chaque étape sur votre espace de suivi.");
   return send(
@@ -157,7 +157,7 @@ export function sendBuybackCounterOfferEmail(b: BuybackEmailData) {
 
 /** Rendez-vous confirmé par l'atelier (dépôt LOCAL). */
 export function appointmentHtml(date: Date) {
-  return p(`Rendez-vous le <strong>${dateTimeFr(date)}</strong> à l'atelier, ${ATELIER}. Pensez à votre pièce d'identité.`);
+  return p(`Rendez-vous le <strong>${dateTimeFr(date)}</strong> à l'atelier, ${ATELIER}.`);
 }
 
 /** Alerte interne quand le client répond à une contre-offre. */
